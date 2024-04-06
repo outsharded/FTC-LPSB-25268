@@ -33,6 +33,8 @@ import com.qualcomm.robotcore.eventloop.opmode.Disabled;
 import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode;
 import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
 import com.qualcomm.robotcore.hardware.DcMotor;
+import com.qualcomm.robotcore.hardware.DcMotorSimple;
+import com.qualcomm.robotcore.hardware.Servo;
 import com.qualcomm.robotcore.util.ElapsedTime;
 
 /*
@@ -73,16 +75,45 @@ public class BasicOmniOpMode_Linear extends LinearOpMode {
     private DcMotor leftBackDrive = null;
     private DcMotor rightFrontDrive = null;
     private DcMotor rightBackDrive = null;
+    private DcMotor arm = null;
+    private DcMotor gripPose = null;
+    private Servo grip = null;
+
+    private boolean manualMode = false;
+    private final double armManualDeadband = 0.03;
+
+    private final double gripperClosedPosition = 0.3;
+    private final double gripperOpenPosition = 0.5;
+
+
+    private final int armHomePosition = 0;
+    private final int armIntakePosition = 10;
+    private final int armScorePosition = 600;
+    private final int armShutdownThreshold = 5;
+
+    private final int gripHomePosition = 0;
+    private final int gripIntakePosition = 10;
+    private final int gripScorePosition = 600;
+    private final int gripShutdownThreshold = 5;
+
+    private final double wheelSpeed = 0.6;
+    private final double armSpeed = 0.5;
+
+
 
     @Override
     public void runOpMode() {
-
+        double manualArmPower;
+        double manualGripPower;
         // Initialize the hardware variables. Note that the strings used here must correspond
         // to the names assigned during the robot configuration step on the DS or RC devices.
-        leftFrontDrive  = hardwareMap.get(DcMotor.class, "left_front_drive");
-        leftBackDrive  = hardwareMap.get(DcMotor.class, "left_back_drive");
-        rightFrontDrive = hardwareMap.get(DcMotor.class, "right_front_drive");
-        rightBackDrive = hardwareMap.get(DcMotor.class, "right_back_drive");
+        leftFrontDrive  = hardwareMap.get(DcMotor.class, "FrontLeft");
+        leftBackDrive  = hardwareMap.get(DcMotor.class, "BackLeft");
+        rightFrontDrive = hardwareMap.get(DcMotor.class, "FrontRight");
+        rightBackDrive = hardwareMap.get(DcMotor.class, "BackRight");
+        arm = hardwareMap.get(DcMotor.class, "arm");
+        gripPose = hardwareMap.get(DcMotor.class, "gripPose");
+        grip = hardwareMap.get(Servo.class, "grip");
 
         // ########################################################################################
         // !!!            IMPORTANT Drive Information. Test your motor directions.            !!!!!
@@ -98,6 +129,10 @@ public class BasicOmniOpMode_Linear extends LinearOpMode {
         leftBackDrive.setDirection(DcMotor.Direction.REVERSE);
         rightFrontDrive.setDirection(DcMotor.Direction.FORWARD);
         rightBackDrive.setDirection(DcMotor.Direction.FORWARD);
+
+        arm.setDirection(DcMotor.Direction.REVERSE);
+        arm.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
+
 
         // Wait for the game to start (driver presses PLAY)
         telemetry.addData("Status", "Initialized");
@@ -117,10 +152,10 @@ public class BasicOmniOpMode_Linear extends LinearOpMode {
 
             // Combine the joystick requests for each axis-motion to determine each wheel's power.
             // Set up a variable for each drive wheel to save the power level for telemetry.
-            double leftFrontPower  = axial + lateral + yaw;
-            double rightFrontPower = axial - lateral - yaw;
-            double leftBackPower   = axial - lateral + yaw;
-            double rightBackPower  = axial + lateral - yaw;
+            double leftFrontPower  = (axial + lateral + yaw) * wheelSpeed;
+            double rightFrontPower = (axial - lateral - yaw) * wheelSpeed;
+            double leftBackPower   = (axial - lateral + yaw) * wheelSpeed;
+            double rightBackPower  = (axial + lateral - yaw) * wheelSpeed;
 
             // Normalize the values so no wheel power exceeds 100%
             // This ensures that the robot maintains the desired motion.
@@ -135,6 +170,81 @@ public class BasicOmniOpMode_Linear extends LinearOpMode {
                 rightBackPower  /= max;
             }
 
+            manualArmPower = gamepad2.right_trigger - gamepad2.left_trigger;
+            manualGripPower = gamepad2.right_stick_y;
+            if (Math.abs(manualArmPower) > armManualDeadband) {
+                if (!manualMode) {
+                    arm.setPower(0.0);
+                    gripPose.setPower(0.0);
+                    arm.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
+                    gripPose.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
+                    manualMode = true;
+                }
+                arm.setPower(manualArmPower * armSpeed);
+                gripPose.setPower(manualGripPower * armSpeed);
+            }
+            else {
+                if (manualMode) {
+                    arm.setTargetPosition(arm.getCurrentPosition());
+                    gripPose.setTargetPosition(gripPose.getCurrentPosition());
+                    arm.setPower(armSpeed);
+                    gripPose.setPower(armSpeed);
+                    arm.setMode(DcMotor.RunMode.RUN_TO_POSITION);
+                    gripPose.setMode(DcMotor.RunMode.RUN_TO_POSITION);
+                    manualMode = false;
+                }
+
+                //preset buttons
+                if (gamepad2.a) {
+                    arm.setTargetPosition(armHomePosition);
+                    gripPose.setTargetPosition(gripHomePosition);
+                    arm.setPower(armSpeed);
+                    gripPose.setPower(armSpeed);
+                    arm.setMode(DcMotor.RunMode.RUN_TO_POSITION);
+                    gripPose.setMode(DcMotor.RunMode.RUN_TO_POSITION);
+                  //  grip.setPosition(wristUpPosition);
+                }
+                else if (gamepad2.b) {
+                    arm.setTargetPosition(armIntakePosition);
+                    gripPose.setTargetPosition(gripIntakePosition);
+                    arm.setPower(armSpeed);
+                    gripPose.setPower(armSpeed);
+                    arm.setMode(DcMotor.RunMode.RUN_TO_POSITION);
+                    gripPose.setMode(DcMotor.RunMode.RUN_TO_POSITION);
+                   // grip.setPosition(wristDownPosition);
+                }
+                else if (gamepad2.y) {
+                    arm.setTargetPosition(armScorePosition);
+                    gripPose.setTargetPosition(gripScorePosition);
+                    arm.setPower(armSpeed);
+                    gripPose.setPower(armSpeed);
+                    arm.setMode(DcMotor.RunMode.RUN_TO_POSITION);
+                    gripPose.setMode(DcMotor.RunMode.RUN_TO_POSITION);
+                   // grip.setPosition(wristUpPosition);
+                }
+            }
+
+            if (!manualMode &&
+                    arm.getMode() == DcMotor.RunMode.RUN_TO_POSITION &&
+                    arm.getTargetPosition() <= armShutdownThreshold &&
+                    arm.getCurrentPosition() <= armShutdownThreshold &&
+                    gripPose.getMode() == DcMotor.RunMode.RUN_TO_POSITION &&
+                    gripPose.getTargetPosition() <= gripShutdownThreshold &&
+                    gripPose.getCurrentPosition() <= gripShutdownThreshold
+            ) {
+                arm.setPower(0.0);
+                gripPose.setPower(0.0);
+                arm.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
+                gripPose.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
+            }
+
+            //GRIPPER
+            if (gamepad2.left_bumper) {
+                grip.setPosition(gripperOpenPosition);
+            }
+            else if (gamepad2.right_bumper) {
+                grip.setPosition(gripperClosedPosition);
+            }
             // This is test code:
             //
             // Uncomment the following code to test your motor directions.
@@ -162,6 +272,8 @@ public class BasicOmniOpMode_Linear extends LinearOpMode {
             telemetry.addData("Status", "Run Time: " + runtime.toString());
             telemetry.addData("Front left/Right", "%4.2f, %4.2f", leftFrontPower, rightFrontPower);
             telemetry.addData("Back  left/Right", "%4.2f, %4.2f", leftBackPower, rightBackPower);
+            telemetry.addData("Arm/Grip Power", "%4.2f, %4.2f", arm.getPower(), gripPose.getPower());
+            telemetry.addData("Grip", "%4.2f, %4.2f", grip.getPosition());
             telemetry.update();
         }
     }}

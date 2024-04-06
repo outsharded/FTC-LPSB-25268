@@ -32,6 +32,9 @@ package org.firstinspires.ftc.teamcode;
 import com.qualcomm.robotcore.eventloop.opmode.Disabled;
 import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode;
 import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
+import com.qualcomm.robotcore.hardware.DcMotor;
+import com.qualcomm.robotcore.hardware.Servo;
+import com.qualcomm.robotcore.util.ElapsedTime;
 
 import org.firstinspires.ftc.robotcore.external.hardware.camera.BuiltinCameraDirection;
 import org.firstinspires.ftc.robotcore.external.hardware.camera.WebcamName;
@@ -41,6 +44,7 @@ import org.firstinspires.ftc.vision.tfod.TfodProcessor;
 
 import java.util.List;
 
+
 /*
  * This OpMode illustrates the basics of TensorFlow Object Detection, using
  * the easiest way.
@@ -49,9 +53,20 @@ import java.util.List;
  * Remove or comment out the @Disabled line to add this OpMode to the Driver Station OpMode list.
  */
 @TeleOp(name = "Computer Vision", group = "Concept")
-@Disabled
+//@Disabled
 public class ConceptTensorFlowObjectDetectionEasy extends LinearOpMode {
 
+    // Declare OpMode members for each of the 4 motors.
+    private ElapsedTime runtime = new ElapsedTime();
+    private DcMotor leftFrontDrive = null;
+    private DcMotor leftBackDrive = null;
+    private DcMotor rightFrontDrive = null;
+    private DcMotor rightBackDrive = null;
+    private DcMotor arm = null;
+    private DcMotor gripPose = null;
+    private Servo grip = null;
+
+    private double xPos = 0.0;
     private static final boolean USE_WEBCAM = true;  // true for webcam, false for phone camera
 
     /**
@@ -76,9 +91,10 @@ public class ConceptTensorFlowObjectDetectionEasy extends LinearOpMode {
         waitForStart();
 
         if (opModeIsActive()) {
+            telemetryTfod();
             while (opModeIsActive()) {
 
-                telemetryTfod();
+
 
                 // Push telemetry to the Driver Station.
                 telemetry.update();
@@ -123,14 +139,26 @@ public class ConceptTensorFlowObjectDetectionEasy extends LinearOpMode {
      * Add telemetry about TensorFlow Object Detection (TFOD) recognitions.
      */
     private void telemetryTfod() {
-
         List<Recognition> currentRecognitions = tfod.getRecognitions();
         telemetry.addData("# Objects Detected", currentRecognitions.size());
+
+        // Track the maximum size and its corresponding X position
+        double maxArea = Double.MIN_VALUE;
+        double xPosOfMaxArea = 0.0;
 
         // Step through the list of recognitions and display info for each one.
         for (Recognition recognition : currentRecognitions) {
             double x = (recognition.getLeft() + recognition.getRight()) / 2 ;
             double y = (recognition.getTop()  + recognition.getBottom()) / 2 ;
+
+            // Calculate area of recognition
+            double area = recognition.getWidth() * recognition.getHeight();
+
+            // Check if this recognition has a larger area than the current maximum
+            if (area > maxArea) {
+                maxArea = area;
+                xPosOfMaxArea = x;
+            }
 
             telemetry.addData(""," ");
             telemetry.addData("Image", "%s (%.0f %% Conf.)", recognition.getLabel(), recognition.getConfidence() * 100);
@@ -138,6 +166,7 @@ public class ConceptTensorFlowObjectDetectionEasy extends LinearOpMode {
             telemetry.addData("- Size", "%.0f x %.0f", recognition.getWidth(), recognition.getHeight());
         }   // end for() loop
 
-    }   // end method telemetryTfod()
-
+        // Set xPos to the X position of the recognition with the largest size
+        xPos = xPosOfMaxArea;
+    }   // end method telemetryTfod(
 }   // end class

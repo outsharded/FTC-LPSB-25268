@@ -56,6 +56,7 @@ public class AutoComputerVision extends LinearOpMode {
     private static final int armPosition = 500; // Example value
     private static final int gripPosePosition = 700; // Example value
     private static final double gripperClosedPosition = 0.3; // Example value
+    private static final double gripperOpenPosition = 0.6; // Example value
 
     @Override
     public void runOpMode() {
@@ -90,16 +91,17 @@ public class AutoComputerVision extends LinearOpMode {
         gripPose.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
         gripPose.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
 
+        grip.setPosition(gripperOpenPosition);
         waitForStart();
 
         if (opModeIsActive()) {
             telemetryTfod();
             // Drive to appropriate wheel positions based on xPos
-            if (xPos < 100) {
+            if (xPos <= 100) {
                 driveToPosition(wheelPosition1);
-            } else if (xPos < 200) {
+            } else if (xPos <= 200) {
                 driveToPosition(wheelPosition2);
-            } else {
+            } else if (xPos > 200) {
                 driveToPosition(wheelPosition3);
             }
 

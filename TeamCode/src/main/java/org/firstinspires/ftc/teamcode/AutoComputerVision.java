@@ -1,6 +1,5 @@
 package org.firstinspires.ftc.teamcode;
 
-import com.qualcomm.robotcore.eventloop.opmode.Disabled;
 import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode;
 import com.qualcomm.robotcore.eventloop.opmode.Autonomous;
 import com.qualcomm.robotcore.hardware.DcMotor;
@@ -26,35 +25,29 @@ public class AutoComputerVision extends LinearOpMode {
     private DcMotor leftBackDrive = null;
     private DcMotor rightFrontDrive = null;
     private DcMotor rightBackDrive = null;
-    private DcMotor arm = null;
-    private DcMotor gripPose = null;
-    private Servo grip = null;
 
     private double xPos = 0.0;
 
     private static final boolean USE_WEBCAM = true;  // true for webcam, false for phone camera
-
-    /**
-     * The variable to store our instance of the TensorFlow Object Detection processor.
-     */
     private TfodProcessor tfod;
-
+    private static final String TFOD_MODEL_ASSET = "CenterStage.tflite";
+    private static final String[] LABELS = {
+            "Pixel",
+    };
     /**
      * The variable to store our instance of the vision portal.
      */
     private VisionPortal visionPortal;
-
-    private static final double WHEEL_DIAMETER = 4.0; // inches
-    private static final double COUNTS_PER_INCH = (288) / (WHEEL_DIAMETER * Math.PI);
+    // MM
 
     // Define three sets of wheel positions
     private static final int[] wheelPosition1 = {1000, 1000, 1000, 1000}; // Example values
-    private static final int[] wheelPosition2 = {2000, 2000, 2000, 2000}; // Example values
+    private static final int[] wheelPosition2 = {1550, 1550, 1550, 1550}; // Example values
     private static final int[] wheelPosition3 = {3000, 3000, 3000, 3000}; // Example values
 
     // Define arm and gripPose positions and gripper closed position
-    private static final int armPosition = 500; // Example value
-    private static final int gripPosePosition = 700; // Example value
+    private static final int armPosition = 200; // Example value
+    private static final int gripPosePosition = 200; // Example value
     private static final double gripperClosedPosition = 0.3; // Example value
     private static final double gripperOpenPosition = 0.6; // Example value
 
@@ -67,9 +60,9 @@ public class AutoComputerVision extends LinearOpMode {
         leftBackDrive = hardwareMap.get(DcMotor.class, "BackLeft");
         rightFrontDrive = hardwareMap.get(DcMotor.class, "FrontRight");
         rightBackDrive = hardwareMap.get(DcMotor.class, "BackRight");
-        arm = hardwareMap.get(DcMotor.class, "arm");
-        gripPose = hardwareMap.get(DcMotor.class, "gripPose");
-        grip = hardwareMap.get(Servo.class, "grip");
+        DcMotor arm = hardwareMap.get(DcMotor.class, "arm");
+        DcMotor gripPose = hardwareMap.get(DcMotor.class, "gripPose");
+        Servo grip = hardwareMap.get(Servo.class, "grip");
 
         // Set motor directions
         leftFrontDrive.setDirection(DcMotor.Direction.REVERSE);
@@ -97,6 +90,7 @@ public class AutoComputerVision extends LinearOpMode {
         if (opModeIsActive()) {
             telemetryTfod();
             // Drive to appropriate wheel positions based on xPos
+            visionPortal.stopStreaming();
             if (xPos <= 100) {
                 driveToPosition(wheelPosition1);
             } else if (xPos <= 200) {
@@ -113,18 +107,22 @@ public class AutoComputerVision extends LinearOpMode {
             arm.setMode(DcMotor.RunMode.RUN_TO_POSITION);
             gripPose.setMode(DcMotor.RunMode.RUN_TO_POSITION);
 
-            // Close the gripper
-            grip.setPosition(gripperClosedPosition);
-
             // Wait for arm and gripPose to reach target positions
-            while (arm.isBusy() || gripPose.isBusy()) {
+            while (arm.isBusy() || gripPose.isBusy() || leftFrontDrive.isBusy() || leftBackDrive.isBusy() || rightFrontDrive.isBusy() || rightBackDrive.isBusy()) {
                 // Do nothing
+                if (runtime.seconds() >= 15) {
+                    break;
+                }
             }
+
+            grip.setPosition(gripperClosedPosition);
         }
     }
 
     // Method to drive to specified wheel positions
     private void driveToPosition(int[] positions) {
+        ElapsedTime driveTime = new ElapsedTime();
+
         leftFrontDrive.setTargetPosition(positions[0]);
         leftBackDrive.setTargetPosition(positions[1]);
         rightFrontDrive.setTargetPosition(positions[2]);
@@ -144,6 +142,10 @@ public class AutoComputerVision extends LinearOpMode {
         // Wait for motors to reach target positions
         while (leftFrontDrive.isBusy() || leftBackDrive.isBusy() || rightFrontDrive.isBusy() || rightBackDrive.isBusy()) {
             // Do nothing
+            if (driveTime.seconds() >= 10) {
+                break;
+            }
+
         }
 
         // Stop the motors
@@ -159,17 +161,52 @@ public class AutoComputerVision extends LinearOpMode {
     private void initTfod() {
 
         // Create the TensorFlow processor the easy way.
-        tfod = TfodProcessor.easyCreateWithDefaults();
+        tfod = new TfodProcessor.Builder()
 
-        // Create the vision portal the easy way.
+                // With the following lines commented out, the default TfodProcessor Builder
+                // will load the default model for the season. To define a custom model to load,
+                // choose one of the following:
+                //   Use setModelAssetName() if the custom TF Model is built in as an asset (AS only).
+                //   Use setModelFileName() if you have downloaded a custom team model to the Robot Controller.
+                .setModelAssetName(TFOD_MODEL_ASSET)
+                //.setModelFileName(TFOD_MODEL_FILE)
+
+                // The following default settings are available to un-comment and edit as needed to
+                // set parameters for custom models.
+                .setModelLabels(LABELS)
+                //.setIsModelTensorFlow2(true)
+                //.setIsModelQuantized(true)
+                //.setModelInputSize(300)
+                //.setModelAspectRatio(16.0 / 9.0)
+
+                .build();
+
+// Create the vision portal by using a builder.
+        VisionPortal.Builder builder = new VisionPortal.Builder();
+// Set the camera (webcam vs. built-in RC phone camera).
         if (USE_WEBCAM) {
-            visionPortal = VisionPortal.easyCreateWithDefaults(
-                    hardwareMap.get(WebcamName.class, "Webcam 1"), tfod);
+            builder.setCamera(hardwareMap.get(WebcamName.class, "Webcam 1"));
         } else {
-            visionPortal = VisionPortal.easyCreateWithDefaults(
-                    BuiltinCameraDirection.BACK, tfod);
+            builder.setCamera(BuiltinCameraDirection.BACK);
         }
+// Choose a camera resolution. Not all cameras support all resolutions.
+     //   builder.setCameraResolution(new Size(640, 480));
 
+// Enable the RC preview (LiveView).  Set "false" to omit camera monitoring.
+        builder.enableLiveView(true);
+
+// Set the stream format; MJPEG uses less bandwidth than default YUY2.
+        builder.setStreamFormat(VisionPortal.StreamFormat.YUY2);
+        builder.setAutoStopLiveView(false);
+
+// Set and enable the processor.
+        builder.addProcessor(tfod);
+
+// Build the Vision Portal, using the above settings.
+        visionPortal = builder.build();
+
+        tfod.setZoom(2.0);
+        tfod.setMinResultConfidence(0.75f);
     }   // end method initTfod()
 
     /**
@@ -205,5 +242,5 @@ public class AutoComputerVision extends LinearOpMode {
 
         // Set xPos to the X position of the recognition with the largest size
         xPos = xPosOfMaxArea;
-    }   // end method telemetryTfod(
+    }   // end method telemetryTfod
 }

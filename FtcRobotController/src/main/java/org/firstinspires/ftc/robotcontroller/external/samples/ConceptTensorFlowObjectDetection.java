@@ -129,7 +129,7 @@ public class ConceptTensorFlowObjectDetection extends LinearOpMode {
 
             // The following default settings are available to un-comment and edit as needed to 
             // set parameters for custom models.
-            //.setModelLabels(LABELS)
+            .setModelLabels(LABELS)
             //.setIsModelTensorFlow2(true)
             //.setIsModelQuantized(true)
             //.setModelInputSize(300)

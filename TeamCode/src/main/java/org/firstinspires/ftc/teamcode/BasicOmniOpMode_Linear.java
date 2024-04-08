@@ -33,6 +33,7 @@ package org.firstinspires.ftc.teamcode;
 import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode;
 import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
 //import com.qualcomm.robotcore.hardware.DcMotor;
+import com.qualcomm.robotcore.hardware.DcMotor;
 import com.qualcomm.robotcore.hardware.DcMotorEx;
 //import com.qualcomm.robotcore.hardware.DcMotorExSimple;
 import com.qualcomm.robotcore.hardware.Servo;
@@ -72,6 +73,7 @@ public class BasicOmniOpMode_Linear extends LinearOpMode {
 
     // Declare OpMode members for each of the 4 motors.
     private ElapsedTime runtime = new ElapsedTime();
+    private ElapsedTime sinceStart = new ElapsedTime();
     private DcMotorEx leftFrontDrive = null;
     private DcMotorEx leftBackDrive = null;
     private DcMotorEx rightFrontDrive = null;
@@ -79,6 +81,7 @@ public class BasicOmniOpMode_Linear extends LinearOpMode {
     private DcMotorEx arm = null;
     private DcMotorEx gripPose = null;
     private Servo grip = null;
+    private Servo planeLaucher = null;
 
     private boolean manualMode = false;
     private final double armManualDeadband = 0.03;
@@ -86,6 +89,8 @@ public class BasicOmniOpMode_Linear extends LinearOpMode {
     private final double gripperClosedPosition = 0.3;
     private final double gripperOpenPosition = 0.5;
 
+    private final double planeLauncherPreset = 0.3;
+    private final double planeLauncherActive = 1.0;
 
     private final int armHomePosition = 0;
     private final int armIntakePosition = 10;
@@ -101,20 +106,25 @@ public class BasicOmniOpMode_Linear extends LinearOpMode {
     private final double armSpeed = 0.5;
 
 
-
     @Override
     public void runOpMode() {
         double manualArmPower;
         double manualGripPower;
         // Initialize the hardware variables. Note that the strings used here must correspond
         // to the names assigned during the robot configuration step on the DS or RC devices.
-        leftFrontDrive  = hardwareMap.get(DcMotorEx.class, "FrontLeft");
-        leftBackDrive  = hardwareMap.get(DcMotorEx.class, "BackLeft");
+        leftFrontDrive = hardwareMap.get(DcMotorEx.class, "FrontLeft");
+        leftBackDrive = hardwareMap.get(DcMotorEx.class, "BackLeft");
         rightFrontDrive = hardwareMap.get(DcMotorEx.class, "FrontRight");
         rightBackDrive = hardwareMap.get(DcMotorEx.class, "BackRight");
         arm = hardwareMap.get(DcMotorEx.class, "arm");
         gripPose = hardwareMap.get(DcMotorEx.class, "gripPose");
         grip = hardwareMap.get(Servo.class, "grip");
+        planeLaucher = hardwareMap.get(Servo.class, "planeLauncher");
+
+        arm.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
+        arm.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
+        gripPose.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
+        gripPose.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
 
         // ########################################################################################
         // !!!            IMPORTANT Drive Information. Test your motor directions.            !!!!!
@@ -143,39 +153,28 @@ public class BasicOmniOpMode_Linear extends LinearOpMode {
 
         waitForStart();
         runtime.reset();
-
+        sinceStart.reset();
         // run until the end of the match (driver presses STOP)
         while (opModeIsActive()) {
-            double max;
 
             // POV Mode uses left joystick to go forward & strafe, and right joystick to rotate.
-            double axial   = -gamepad1.left_stick_y;  // Note: pushing stick forward gives negative value
-            double lateral =  gamepad1.left_stick_x;
-            double yaw     =  gamepad1.right_stick_x;
+            double axial = -gamepad1.left_stick_y;  // Note: pushing stick forward gives negative value
+            double lateral = gamepad1.left_stick_x;
+            double yaw = gamepad1.right_stick_x;
 
             // Combine the joystick requests for each axis-motion to determine each wheel's power.
             // Set up a variable for each drive wheel to save the power level for telemetry.
-            double leftFrontPower  = (axial + lateral + yaw) * wheelSpeed;
+            double leftFrontPower = (axial + lateral + yaw) * wheelSpeed;
             double rightFrontPower = (axial - lateral - yaw) * wheelSpeed;
-            double leftBackPower   = (axial - lateral + yaw) * wheelSpeed;
-            double rightBackPower  = (axial + lateral - yaw) * wheelSpeed;
+            double leftBackPower = (axial - lateral + yaw) * wheelSpeed;
+            double rightBackPower = (axial + lateral - yaw) * wheelSpeed;
 
-            // Normalize the values so no wheel power exceeds 100%
-            // This ensures that the robot maintains the desired motion.
-            max = Math.max(Math.abs(leftFrontPower), Math.abs(rightFrontPower));
-            max = Math.max(max, Math.abs(leftBackPower));
-            max = Math.max(max, Math.abs(rightBackPower));
-
-            if (max > 1.0) {
-                leftFrontPower  /= max;
-                rightFrontPower /= max;
-                leftBackPower   /= max;
-                rightBackPower  /= max;
-            }
+            double planeLaucherPosition = gamepad1.triangle ? planeLauncherActive : planeLauncherPreset;
 
             manualArmPower = gamepad2.right_trigger - gamepad2.left_trigger;
-            manualGripPower = gamepad2.right_stick_y;
-            if (Math.abs(manualArmPower) > armManualDeadband) {
+            manualGripPower  = gamepad2.dpad_left ? 1.0 : gamepad2.dpad_right ? 1.0 : 0.0;
+          //  manualGripPower = gamepad2.right_stick_y;
+            if (Math.abs(manualArmPower) > armManualDeadband || Math.abs(manualGripPower) > armManualDeadband) {
                 if (!manualMode) {
                     arm.setPower(0.0);
                     gripPose.setPower(0.0);
@@ -185,8 +184,7 @@ public class BasicOmniOpMode_Linear extends LinearOpMode {
                 }
                 arm.setPower(manualArmPower * armSpeed);
                 gripPose.setPower(manualGripPower * armSpeed);
-            }
-            else {
+            } else {
                 if (manualMode) {
                     arm.setTargetPosition(arm.getCurrentPosition());
                     gripPose.setTargetPosition(gripPose.getCurrentPosition());
@@ -198,7 +196,7 @@ public class BasicOmniOpMode_Linear extends LinearOpMode {
                 }
 
                 //preset buttons
-                if (gamepad2.a) {
+                if (gamepad2.square) {
                     arm.setTargetPosition(armHomePosition);
                     gripPose.setTargetPosition(gripHomePosition);
                     arm.setPower(armSpeed);
@@ -206,8 +204,7 @@ public class BasicOmniOpMode_Linear extends LinearOpMode {
                     arm.setMode(DcMotorEx.RunMode.RUN_TO_POSITION);
                     gripPose.setMode(DcMotorEx.RunMode.RUN_TO_POSITION);
                     //  grip.setPosition(wristUpPosition);
-                }
-                else if (gamepad2.b) {
+                } else if (gamepad2.circle) {
                     arm.setTargetPosition(armIntakePosition);
                     gripPose.setTargetPosition(gripIntakePosition);
                     arm.setPower(armSpeed);
@@ -215,8 +212,7 @@ public class BasicOmniOpMode_Linear extends LinearOpMode {
                     arm.setMode(DcMotorEx.RunMode.RUN_TO_POSITION);
                     gripPose.setMode(DcMotorEx.RunMode.RUN_TO_POSITION);
                     // grip.setPosition(wristDownPosition);
-                }
-                else if (gamepad2.y) {
+                } else if (gamepad2.triangle) {
                     arm.setTargetPosition(armScorePosition);
                     gripPose.setTargetPosition(gripScorePosition);
                     arm.setPower(armSpeed);
@@ -244,8 +240,7 @@ public class BasicOmniOpMode_Linear extends LinearOpMode {
             //GRIPPER
             if (gamepad2.left_bumper) {
                 grip.setPosition(gripperOpenPosition);
-            }
-            else if (gamepad2.right_bumper) {
+            } else if (gamepad2.right_bumper) {
                 grip.setPosition(gripperClosedPosition);
             }
             // This is test code:
@@ -271,6 +266,15 @@ public class BasicOmniOpMode_Linear extends LinearOpMode {
             leftBackDrive.setPower(leftBackPower);
             rightBackDrive.setPower(rightBackPower);
 
+            planeLaucher.setPosition(planeLaucherPosition);
+
+            if (sinceStart.seconds() == 90) {
+                gamepad1.rumble(500);
+                gamepad2.rumble(500);
+                gamepad1.setLedColor(1, 0, 0, 30000);
+                gamepad2.setLedColor(1, 0, 0, 30000);
+                telemetry.addLine("Endgame has begun.");
+            }
             // Show the elapsed game time and wheel power.
             telemetry.addData("Status", "Run Time: " + runtime.toString());
             telemetry.addData("Front left/Right", "%4.2f, %4.2f", leftFrontPower, rightFrontPower);
@@ -279,4 +283,6 @@ public class BasicOmniOpMode_Linear extends LinearOpMode {
             telemetry.addData("Grip", "%4.2f, %4.2f", grip.getPosition());
             telemetry.update();
         }
-    }}
+    }
+
+}

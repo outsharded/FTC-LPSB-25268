@@ -1,8 +1,13 @@
 package org.firstinspires.ftc.teamcode;
 
+import com.qualcomm.hardware.rev.RevHubOrientationOnRobot;
 import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode;
 import com.qualcomm.robotcore.eventloop.opmode.Autonomous;
 import com.qualcomm.robotcore.hardware.DcMotorEx;
+import com.qualcomm.robotcore.hardware.IMU;
+import org.firstinspires.ftc.robotcore.external.navigation.AngleUnit;
+import org.firstinspires.ftc.robotcore.external.navigation.AngularVelocity;
+import org.firstinspires.ftc.robotcore.external.navigation.YawPitchRollAngles;
 
 import com.qualcomm.robotcore.hardware.Servo;
 import com.qualcomm.robotcore.util.ElapsedTime;
@@ -26,6 +31,13 @@ public class AutoComputerVision extends LinearOpMode {
     private DcMotorEx leftBackDrive = null;
     private DcMotorEx rightFrontDrive = null;
     private DcMotorEx rightBackDrive = null;
+    private DcMotorEx arm = null;
+    private DcMotorEx gripPose = null;
+    private IMU imu = null;
+
+    private Double yaw = 0.0;
+    private Double pitch = 0.0;
+    private Double roll = 0.0;
 
     private double xPos = 0.0;
 
@@ -61,9 +73,10 @@ public class AutoComputerVision extends LinearOpMode {
         leftBackDrive = hardwareMap.get(DcMotorEx.class, "BackLeft");
         rightFrontDrive = hardwareMap.get(DcMotorEx.class, "FrontRight");
         rightBackDrive = hardwareMap.get(DcMotorEx.class, "BackRight");
-        DcMotorEx arm = hardwareMap.get(DcMotorEx.class, "arm");
-        DcMotorEx gripPose = hardwareMap.get(DcMotorEx.class, "gripPose");
+        arm = hardwareMap.get(DcMotorEx.class, "arm");
+        gripPose = hardwareMap.get(DcMotorEx.class, "gripPose");
         Servo grip = hardwareMap.get(Servo.class, "grip");
+        imu = hardwareMap.get(IMU.class, "IMU");
 
         // Set motor directions
         leftFrontDrive.setDirection(DcMotorEx.Direction.REVERSE);
@@ -85,13 +98,30 @@ public class AutoComputerVision extends LinearOpMode {
         gripPose.setMode(DcMotorEx.RunMode.STOP_AND_RESET_ENCODER);
         gripPose.setMode(DcMotorEx.RunMode.RUN_USING_ENCODER);
 
-        grip.setPosition(gripperOpenPosition);
-        waitForStart();
+        imu.initialize(
+                new IMU.Parameters(
+                        new RevHubOrientationOnRobot(
+                                RevHubOrientationOnRobot.LogoFacingDirection.UP,
+                                RevHubOrientationOnRobot.UsbFacingDirection.BACKWARD
+                        )
+                )
+        );
 
+        YawPitchRollAngles robotOrientation;
+        robotOrientation = imu.getRobotYawPitchRollAngles();
+
+        grip.setPosition(gripperOpenPosition);
+
+
+        waitForStart();
+        doTfod();
         if (opModeIsActive()) {
-            telemetryTfod();
+            yaw   = robotOrientation.getYaw(AngleUnit.DEGREES);
+            pitch = robotOrientation.getPitch(AngleUnit.DEGREES);
+            roll  = robotOrientation.getRoll(AngleUnit.DEGREES);
+
             // Drive to appropriate wheel positions based on xPos
-            visionPortal.stopStreaming();
+
             if (xPos <= 100) {
                 driveToPosition(wheelPosition1);
             } else if (xPos <= 200) {
@@ -143,6 +173,11 @@ public class AutoComputerVision extends LinearOpMode {
         // Wait for motors to reach target positions
         while (leftFrontDrive.isBusy() || leftBackDrive.isBusy() || rightFrontDrive.isBusy() || rightBackDrive.isBusy()) {
             // Do nothing
+            if (yaw < -10 || yaw > 10) {
+                telemetry.addData("Heading", "Heading is over 10 degrees off!");
+                telemetry.update();
+            }
+
             if (driveTime.seconds() >= 10) {
                 break;
             }
@@ -164,9 +199,6 @@ public class AutoComputerVision extends LinearOpMode {
         // Create the TensorFlow processor the easy way.
         tfod = new TfodProcessor.Builder()
 
-                // With the following lines commented out, the default TfodProcessor Builder
-                // will load the default model for the season. To define a custom model to load,
-                // choose one of the following:
                 //   Use setModelAssetName() if the custom TF Model is built in as an asset (AS only).
                 //   Use setModelFileName() if you have downloaded a custom team model to the Robot Controller.
                 .setModelAssetName(TFOD_MODEL_ASSET)
@@ -213,7 +245,7 @@ public class AutoComputerVision extends LinearOpMode {
     /**
      * Add telemetry about TensorFlow Object Detection (TFOD) recognitions.
      */
-    private void telemetryTfod() {
+    private void doTfod() {
         List<Recognition> currentRecognitions = tfod.getRecognitions();
         telemetry.addData("# Objects Detected", currentRecognitions.size());
 
@@ -243,5 +275,6 @@ public class AutoComputerVision extends LinearOpMode {
 
         // Set xPos to the X position of the recognition with the largest size
         xPos = xPosOfMaxArea;
+        visionPortal.stopStreaming();
     }   // end method telemetryTfod
 }

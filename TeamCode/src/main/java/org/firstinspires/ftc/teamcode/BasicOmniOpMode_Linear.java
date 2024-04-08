@@ -36,6 +36,7 @@ import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
 import com.qualcomm.robotcore.hardware.DcMotor;
 import com.qualcomm.robotcore.hardware.DcMotorEx;
 //import com.qualcomm.robotcore.hardware.DcMotorExSimple;
+import com.qualcomm.robotcore.hardware.PIDFCoefficients;
 import com.qualcomm.robotcore.hardware.Servo;
 import com.qualcomm.robotcore.util.ElapsedTime;
 
@@ -92,6 +93,8 @@ public class BasicOmniOpMode_Linear extends LinearOpMode {
     private final double planeLauncherPreset = 0.3;
     private final double planeLauncherActive = 1.0;
 
+    private final PIDFCoefficients armPIDFCoefficents = new PIDFCoefficients(0,0,0,0)
+    private final PIDFCoefficients gripPIDFCoefficents = new PIDFCoefficients(0,0,0,0)
     private final int armHomePosition = 0;
     private final int armIntakePosition = 10;
     private final int armScorePosition = 600;
@@ -104,7 +107,7 @@ public class BasicOmniOpMode_Linear extends LinearOpMode {
 
     private final double wheelSpeed = 0.6;
     private final double armSpeed = 0.5;
-
+    private boolean isEndGame = false;
 
     @Override
     public void runOpMode() {
@@ -156,6 +159,18 @@ public class BasicOmniOpMode_Linear extends LinearOpMode {
         sinceStart.reset();
         // run until the end of the match (driver presses STOP)
         while (opModeIsActive()) {
+            if (sinceStart.seconds() <= 90) {
+                isEndGame = true;
+            }
+
+            if (sinceStart.seconds() == 90) {
+                gamepad1.rumble(500);
+                gamepad2.rumble(500);
+                gamepad1.setLedColor(1, 0, 0, 30000);
+                gamepad2.setLedColor(1, 0, 0, 30000);
+                telemetry.addLine("Endgame has begun.");
+            }
+
 
             // POV Mode uses left joystick to go forward & strafe, and right joystick to rotate.
             double axial = -gamepad1.left_stick_y;  // Note: pushing stick forward gives negative value
@@ -169,7 +184,7 @@ public class BasicOmniOpMode_Linear extends LinearOpMode {
             double leftBackPower = (axial - lateral + yaw) * wheelSpeed;
             double rightBackPower = (axial + lateral - yaw) * wheelSpeed;
 
-            double planeLaucherPosition = gamepad1.triangle ? planeLauncherActive : planeLauncherPreset;
+
 
             manualArmPower = gamepad2.right_trigger - gamepad2.left_trigger;
             manualGripPower  = gamepad2.dpad_left ? 1.0 : gamepad2.dpad_right ? 1.0 : 0.0;
@@ -201,6 +216,7 @@ public class BasicOmniOpMode_Linear extends LinearOpMode {
                     gripPose.setTargetPosition(gripHomePosition);
                     arm.setPower(armSpeed);
                     gripPose.setPower(armSpeed);
+                   // arm.setPIDFCoefficients(DcMotorEx.RunMode.RUN_TO_POSITION, new PIDFCoefficients());
                     arm.setMode(DcMotorEx.RunMode.RUN_TO_POSITION);
                     gripPose.setMode(DcMotorEx.RunMode.RUN_TO_POSITION);
                     //  grip.setPosition(wristUpPosition);
@@ -225,33 +241,17 @@ public class BasicOmniOpMode_Linear extends LinearOpMode {
 
             if (!manualMode &&
                     arm.getMode() == DcMotorEx.RunMode.RUN_TO_POSITION &&
-                    arm.getTargetPosition() <= armShutdownThreshold &&
-                    arm.getCurrentPosition() <= armShutdownThreshold &&
+                    Math.abs(arm.getTargetPosition() - arm.getTargetPosition()) <= armShutdownThreshold &&
+                   // arm.getCurrentPosition() <= armShutdownThreshold &&
                     gripPose.getMode() == DcMotorEx.RunMode.RUN_TO_POSITION &&
-                    gripPose.getTargetPosition() <= gripShutdownThreshold &&
-                    gripPose.getCurrentPosition() <= gripShutdownThreshold
+                    Math.abs(gripPose.getTargetPosition() - gripPose.getCurrentPosition()) <= gripShutdownThreshold &&
+                   // gripPose.getCurrentPosition() <= gripShutdownThreshold
             ) {
                 arm.setPower(0.0);
                 gripPose.setPower(0.0);
                 arm.setMode(DcMotorEx.RunMode.RUN_WITHOUT_ENCODER);
                 gripPose.setMode(DcMotorEx.RunMode.RUN_WITHOUT_ENCODER);
             }
-
-            //GRIPPER
-            if (gamepad2.left_bumper) {
-                grip.setPosition(gripperOpenPosition);
-            } else if (gamepad2.right_bumper) {
-                grip.setPosition(gripperClosedPosition);
-            }
-            // This is test code:
-            //
-            // Uncomment the following code to test your motor directions.
-            // Each button should make the corresponding motor run FORWARD.
-            //   1) First get all the motors to take to correct positions on the robot
-            //      by adjusting your Robot Configuration if necessary.
-            //   2) Then make sure they run in the correct direction by modifying the
-            //      the setDirection() calls above.
-            // Once the correct motors move in the correct direction re-comment this code.
 
             /*
             leftFrontPower  = gamepad1.x ? 1.0 : 0.0;  // X gamepad
@@ -260,21 +260,25 @@ public class BasicOmniOpMode_Linear extends LinearOpMode {
             rightBackPower  = gamepad1.b ? 1.0 : 0.0;  // B gamepad
             */
 
+            // Send all values to actuators
+
+            if (gamepad1.triangle || isEndGame) {
+                planeLaucher.setPosition(planeLauncherActive);
+            } else if (gamepad1.circle) {
+                planeLaucher.setPosition(planeLauncherPreset);
+            }
+
+            if (gamepad2.left_bumper) {
+                grip.setPosition(gripperOpenPosition);
+            } else if (gamepad2.right_bumper) {
+                grip.setPosition(gripperClosedPosition);
+            }
             // Send calculated power to wheels
             leftFrontDrive.setPower(leftFrontPower);
             rightFrontDrive.setPower(rightFrontPower);
             leftBackDrive.setPower(leftBackPower);
             rightBackDrive.setPower(rightBackPower);
 
-            planeLaucher.setPosition(planeLaucherPosition);
-
-            if (sinceStart.seconds() == 90) {
-                gamepad1.rumble(500);
-                gamepad2.rumble(500);
-                gamepad1.setLedColor(1, 0, 0, 30000);
-                gamepad2.setLedColor(1, 0, 0, 30000);
-                telemetry.addLine("Endgame has begun.");
-            }
             // Show the elapsed game time and wheel power.
             telemetry.addData("Status", "Run Time: " + runtime.toString());
             telemetry.addData("Front left/Right", "%4.2f, %4.2f", leftFrontPower, rightFrontPower);

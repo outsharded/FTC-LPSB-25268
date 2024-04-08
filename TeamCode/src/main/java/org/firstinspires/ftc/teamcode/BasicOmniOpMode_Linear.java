@@ -29,11 +29,12 @@
 
 package org.firstinspires.ftc.teamcode;
 
-import com.qualcomm.robotcore.eventloop.opmode.Disabled;
+//import com.qualcomm.robotcore.eventloop.opmode.Disabled;
 import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode;
 import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
-import com.qualcomm.robotcore.hardware.DcMotor;
-import com.qualcomm.robotcore.hardware.DcMotorSimple;
+//import com.qualcomm.robotcore.hardware.DcMotor;
+import com.qualcomm.robotcore.hardware.DcMotorEx;
+//import com.qualcomm.robotcore.hardware.DcMotorExSimple;
 import com.qualcomm.robotcore.hardware.Servo;
 import com.qualcomm.robotcore.util.ElapsedTime;
 
@@ -71,12 +72,12 @@ public class BasicOmniOpMode_Linear extends LinearOpMode {
 
     // Declare OpMode members for each of the 4 motors.
     private ElapsedTime runtime = new ElapsedTime();
-    private DcMotor leftFrontDrive = null;
-    private DcMotor leftBackDrive = null;
-    private DcMotor rightFrontDrive = null;
-    private DcMotor rightBackDrive = null;
-    private DcMotor arm = null;
-    private DcMotor gripPose = null;
+    private DcMotorEx leftFrontDrive = null;
+    private DcMotorEx leftBackDrive = null;
+    private DcMotorEx rightFrontDrive = null;
+    private DcMotorEx rightBackDrive = null;
+    private DcMotorEx arm = null;
+    private DcMotorEx gripPose = null;
     private Servo grip = null;
 
     private boolean manualMode = false;
@@ -107,12 +108,12 @@ public class BasicOmniOpMode_Linear extends LinearOpMode {
         double manualGripPower;
         // Initialize the hardware variables. Note that the strings used here must correspond
         // to the names assigned during the robot configuration step on the DS or RC devices.
-        leftFrontDrive  = hardwareMap.get(DcMotor.class, "FrontLeft");
-        leftBackDrive  = hardwareMap.get(DcMotor.class, "BackLeft");
-        rightFrontDrive = hardwareMap.get(DcMotor.class, "FrontRight");
-        rightBackDrive = hardwareMap.get(DcMotor.class, "BackRight");
-        arm = hardwareMap.get(DcMotor.class, "arm");
-        gripPose = hardwareMap.get(DcMotor.class, "gripPose");
+        leftFrontDrive  = hardwareMap.get(DcMotorEx.class, "FrontLeft");
+        leftBackDrive  = hardwareMap.get(DcMotorEx.class, "BackLeft");
+        rightFrontDrive = hardwareMap.get(DcMotorEx.class, "FrontRight");
+        rightBackDrive = hardwareMap.get(DcMotorEx.class, "BackRight");
+        arm = hardwareMap.get(DcMotorEx.class, "arm");
+        gripPose = hardwareMap.get(DcMotorEx.class, "gripPose");
         grip = hardwareMap.get(Servo.class, "grip");
 
         // ########################################################################################
@@ -125,13 +126,15 @@ public class BasicOmniOpMode_Linear extends LinearOpMode {
         // when you first test your robot, push the left joystick forward and observe the direction the wheels turn.
         // Reverse the direction (flip FORWARD <-> REVERSE ) of any wheel that runs backward
         // Keep testing until ALL the wheels move the robot forward when you push the left joystick forward.
-        leftFrontDrive.setDirection(DcMotor.Direction.REVERSE);
-        leftBackDrive.setDirection(DcMotor.Direction.REVERSE);
-        rightFrontDrive.setDirection(DcMotor.Direction.FORWARD);
-        rightBackDrive.setDirection(DcMotor.Direction.FORWARD);
+        leftFrontDrive.setDirection(DcMotorEx.Direction.REVERSE);
+        leftBackDrive.setDirection(DcMotorEx.Direction.REVERSE);
+        rightFrontDrive.setDirection(DcMotorEx.Direction.FORWARD);
+        rightBackDrive.setDirection(DcMotorEx.Direction.FORWARD);
 
-        arm.setDirection(DcMotor.Direction.REVERSE);
-        arm.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
+        arm.setDirection(DcMotorEx.Direction.REVERSE);
+        arm.setZeroPowerBehavior(DcMotorEx.ZeroPowerBehavior.BRAKE);
+
+        gripPose.setZeroPowerBehavior(DcMotorEx.ZeroPowerBehavior.BRAKE);
 
 
         // Wait for the game to start (driver presses PLAY)
@@ -176,8 +179,8 @@ public class BasicOmniOpMode_Linear extends LinearOpMode {
                 if (!manualMode) {
                     arm.setPower(0.0);
                     gripPose.setPower(0.0);
-                    arm.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
-                    gripPose.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
+                    arm.setMode(DcMotorEx.RunMode.RUN_WITHOUT_ENCODER);
+                    gripPose.setMode(DcMotorEx.RunMode.RUN_WITHOUT_ENCODER);
                     manualMode = true;
                 }
                 arm.setPower(manualArmPower * armSpeed);
@@ -189,8 +192,8 @@ public class BasicOmniOpMode_Linear extends LinearOpMode {
                     gripPose.setTargetPosition(gripPose.getCurrentPosition());
                     arm.setPower(armSpeed);
                     gripPose.setPower(armSpeed);
-                    arm.setMode(DcMotor.RunMode.RUN_TO_POSITION);
-                    gripPose.setMode(DcMotor.RunMode.RUN_TO_POSITION);
+                    arm.setMode(DcMotorEx.RunMode.RUN_TO_POSITION);
+                    gripPose.setMode(DcMotorEx.RunMode.RUN_TO_POSITION);
                     manualMode = false;
                 }
 
@@ -200,42 +203,42 @@ public class BasicOmniOpMode_Linear extends LinearOpMode {
                     gripPose.setTargetPosition(gripHomePosition);
                     arm.setPower(armSpeed);
                     gripPose.setPower(armSpeed);
-                    arm.setMode(DcMotor.RunMode.RUN_TO_POSITION);
-                    gripPose.setMode(DcMotor.RunMode.RUN_TO_POSITION);
-                  //  grip.setPosition(wristUpPosition);
+                    arm.setMode(DcMotorEx.RunMode.RUN_TO_POSITION);
+                    gripPose.setMode(DcMotorEx.RunMode.RUN_TO_POSITION);
+                    //  grip.setPosition(wristUpPosition);
                 }
                 else if (gamepad2.b) {
                     arm.setTargetPosition(armIntakePosition);
                     gripPose.setTargetPosition(gripIntakePosition);
                     arm.setPower(armSpeed);
                     gripPose.setPower(armSpeed);
-                    arm.setMode(DcMotor.RunMode.RUN_TO_POSITION);
-                    gripPose.setMode(DcMotor.RunMode.RUN_TO_POSITION);
-                   // grip.setPosition(wristDownPosition);
+                    arm.setMode(DcMotorEx.RunMode.RUN_TO_POSITION);
+                    gripPose.setMode(DcMotorEx.RunMode.RUN_TO_POSITION);
+                    // grip.setPosition(wristDownPosition);
                 }
                 else if (gamepad2.y) {
                     arm.setTargetPosition(armScorePosition);
                     gripPose.setTargetPosition(gripScorePosition);
                     arm.setPower(armSpeed);
                     gripPose.setPower(armSpeed);
-                    arm.setMode(DcMotor.RunMode.RUN_TO_POSITION);
-                    gripPose.setMode(DcMotor.RunMode.RUN_TO_POSITION);
-                   // grip.setPosition(wristUpPosition);
+                    arm.setMode(DcMotorEx.RunMode.RUN_TO_POSITION);
+                    gripPose.setMode(DcMotorEx.RunMode.RUN_TO_POSITION);
+                    // grip.setPosition(wristUpPosition);
                 }
             }
 
             if (!manualMode &&
-                    arm.getMode() == DcMotor.RunMode.RUN_TO_POSITION &&
+                    arm.getMode() == DcMotorEx.RunMode.RUN_TO_POSITION &&
                     arm.getTargetPosition() <= armShutdownThreshold &&
                     arm.getCurrentPosition() <= armShutdownThreshold &&
-                    gripPose.getMode() == DcMotor.RunMode.RUN_TO_POSITION &&
+                    gripPose.getMode() == DcMotorEx.RunMode.RUN_TO_POSITION &&
                     gripPose.getTargetPosition() <= gripShutdownThreshold &&
                     gripPose.getCurrentPosition() <= gripShutdownThreshold
             ) {
                 arm.setPower(0.0);
                 gripPose.setPower(0.0);
-                arm.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
-                gripPose.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
+                arm.setMode(DcMotorEx.RunMode.RUN_WITHOUT_ENCODER);
+                gripPose.setMode(DcMotorEx.RunMode.RUN_WITHOUT_ENCODER);
             }
 
             //GRIPPER

@@ -2,7 +2,8 @@ package org.firstinspires.ftc.teamcode;
 
 import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode;
 import com.qualcomm.robotcore.eventloop.opmode.Autonomous;
-import com.qualcomm.robotcore.hardware.DcMotor;
+import com.qualcomm.robotcore.hardware.DcMotorEx;
+
 import com.qualcomm.robotcore.hardware.Servo;
 import com.qualcomm.robotcore.util.ElapsedTime;
 
@@ -21,10 +22,10 @@ import java.util.List;
 public class AutoComputerVision extends LinearOpMode {
 
     private ElapsedTime runtime = new ElapsedTime();
-    private DcMotor leftFrontDrive = null;
-    private DcMotor leftBackDrive = null;
-    private DcMotor rightFrontDrive = null;
-    private DcMotor rightBackDrive = null;
+    private DcMotorEx leftFrontDrive = null;
+    private DcMotorEx leftBackDrive = null;
+    private DcMotorEx rightFrontDrive = null;
+    private DcMotorEx rightBackDrive = null;
 
     private double xPos = 0.0;
 
@@ -56,33 +57,33 @@ public class AutoComputerVision extends LinearOpMode {
 
         initTfod();
         // Initialize hardware components
-        leftFrontDrive = hardwareMap.get(DcMotor.class, "FrontLeft");
-        leftBackDrive = hardwareMap.get(DcMotor.class, "BackLeft");
-        rightFrontDrive = hardwareMap.get(DcMotor.class, "FrontRight");
-        rightBackDrive = hardwareMap.get(DcMotor.class, "BackRight");
-        DcMotor arm = hardwareMap.get(DcMotor.class, "arm");
-        DcMotor gripPose = hardwareMap.get(DcMotor.class, "gripPose");
+        leftFrontDrive = hardwareMap.get(DcMotorEx.class, "FrontLeft");
+        leftBackDrive = hardwareMap.get(DcMotorEx.class, "BackLeft");
+        rightFrontDrive = hardwareMap.get(DcMotorEx.class, "FrontRight");
+        rightBackDrive = hardwareMap.get(DcMotorEx.class, "BackRight");
+        DcMotorEx arm = hardwareMap.get(DcMotorEx.class, "arm");
+        DcMotorEx gripPose = hardwareMap.get(DcMotorEx.class, "gripPose");
         Servo grip = hardwareMap.get(Servo.class, "grip");
 
         // Set motor directions
-        leftFrontDrive.setDirection(DcMotor.Direction.REVERSE);
-        leftBackDrive.setDirection(DcMotor.Direction.REVERSE);
-        rightFrontDrive.setDirection(DcMotor.Direction.FORWARD);
-        rightBackDrive.setDirection(DcMotor.Direction.FORWARD);
+        leftFrontDrive.setDirection(DcMotorEx.Direction.REVERSE);
+        leftBackDrive.setDirection(DcMotorEx.Direction.REVERSE);
+        rightFrontDrive.setDirection(DcMotorEx.Direction.FORWARD);
+        rightBackDrive.setDirection(DcMotorEx.Direction.FORWARD);
 
         // Set motor run modes
-        leftFrontDrive.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
-        leftBackDrive.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
-        rightFrontDrive.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
-        rightBackDrive.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
-        leftFrontDrive.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
-        leftBackDrive.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
-        rightFrontDrive.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
-        rightBackDrive.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
-        arm.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
-        arm.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
-        gripPose.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
-        gripPose.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
+        leftFrontDrive.setMode(DcMotorEx.RunMode.STOP_AND_RESET_ENCODER);
+        leftBackDrive.setMode(DcMotorEx.RunMode.STOP_AND_RESET_ENCODER);
+        rightFrontDrive.setMode(DcMotorEx.RunMode.STOP_AND_RESET_ENCODER);
+        rightBackDrive.setMode(DcMotorEx.RunMode.STOP_AND_RESET_ENCODER);
+        leftFrontDrive.setMode(DcMotorEx.RunMode.RUN_USING_ENCODER);
+        leftBackDrive.setMode(DcMotorEx.RunMode.RUN_USING_ENCODER);
+        rightFrontDrive.setMode(DcMotorEx.RunMode.RUN_USING_ENCODER);
+        rightBackDrive.setMode(DcMotorEx.RunMode.RUN_USING_ENCODER);
+        arm.setMode(DcMotorEx.RunMode.STOP_AND_RESET_ENCODER);
+        arm.setMode(DcMotorEx.RunMode.RUN_USING_ENCODER);
+        gripPose.setMode(DcMotorEx.RunMode.STOP_AND_RESET_ENCODER);
+        gripPose.setMode(DcMotorEx.RunMode.RUN_USING_ENCODER);
 
         grip.setPosition(gripperOpenPosition);
         waitForStart();
@@ -104,8 +105,8 @@ public class AutoComputerVision extends LinearOpMode {
             gripPose.setTargetPosition(gripPosePosition);
             arm.setPower(1.0);
             gripPose.setPower(1.0);
-            arm.setMode(DcMotor.RunMode.RUN_TO_POSITION);
-            gripPose.setMode(DcMotor.RunMode.RUN_TO_POSITION);
+            arm.setMode(DcMotorEx.RunMode.RUN_TO_POSITION);
+            gripPose.setMode(DcMotorEx.RunMode.RUN_TO_POSITION);
 
             // Wait for arm and gripPose to reach target positions
             while (arm.isBusy() || gripPose.isBusy() || leftFrontDrive.isBusy() || leftBackDrive.isBusy() || rightFrontDrive.isBusy() || rightBackDrive.isBusy()) {
@@ -134,10 +135,10 @@ public class AutoComputerVision extends LinearOpMode {
         rightFrontDrive.setPower(0.5);
         rightBackDrive.setPower(0.5);
 
-        leftFrontDrive.setMode(DcMotor.RunMode.RUN_TO_POSITION);
-        leftBackDrive.setMode(DcMotor.RunMode.RUN_TO_POSITION);
-        rightFrontDrive.setMode(DcMotor.RunMode.RUN_TO_POSITION);
-        rightBackDrive.setMode(DcMotor.RunMode.RUN_TO_POSITION);
+        leftFrontDrive.setMode(DcMotorEx.RunMode.RUN_TO_POSITION);
+        leftBackDrive.setMode(DcMotorEx.RunMode.RUN_TO_POSITION);
+        rightFrontDrive.setMode(DcMotorEx.RunMode.RUN_TO_POSITION);
+        rightBackDrive.setMode(DcMotorEx.RunMode.RUN_TO_POSITION);
 
         // Wait for motors to reach target positions
         while (leftFrontDrive.isBusy() || leftBackDrive.isBusy() || rightFrontDrive.isBusy() || rightBackDrive.isBusy()) {
@@ -190,7 +191,7 @@ public class AutoComputerVision extends LinearOpMode {
             builder.setCamera(BuiltinCameraDirection.BACK);
         }
 // Choose a camera resolution. Not all cameras support all resolutions.
-     //   builder.setCameraResolution(new Size(640, 480));
+        //   builder.setCameraResolution(new Size(640, 480));
 
 // Enable the RC preview (LiveView).  Set "false" to omit camera monitoring.
         builder.enableLiveView(true);

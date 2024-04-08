@@ -93,8 +93,8 @@ public class BasicOmniOpMode_Linear extends LinearOpMode {
     private final double planeLauncherPreset = 0.3;
     private final double planeLauncherActive = 1.0;
 
-    private final PIDFCoefficients armPIDFCoefficents = new PIDFCoefficients(0,0,0,0)
-    private final PIDFCoefficients gripPIDFCoefficents = new PIDFCoefficients(0,0,0,0)
+    private final PIDFCoefficients armPIDFCoefficents = new PIDFCoefficients(0,0,0,0);
+    private final PIDFCoefficients gripPIDFCoefficents = new PIDFCoefficients(0,0,0,0);
     private final int armHomePosition = 0;
     private final int armIntakePosition = 10;
     private final int armScorePosition = 600;
@@ -205,8 +205,10 @@ public class BasicOmniOpMode_Linear extends LinearOpMode {
                     gripPose.setTargetPosition(gripPose.getCurrentPosition());
                     arm.setPower(armSpeed);
                     gripPose.setPower(armSpeed);
-                    arm.setMode(DcMotorEx.RunMode.RUN_TO_POSITION);
-                    gripPose.setMode(DcMotorEx.RunMode.RUN_TO_POSITION);
+                    arm.setPIDFCoefficients(DcMotorEx.RunMode.RUN_TO_POSITION, armPIDFCoefficents);
+                    //arm.setMode(DcMotorEx.RunMode.RUN_TO_POSITION);
+                    gripPose.setPIDFCoefficients(DcMotor.RunMode.RUN_TO_POSITION, gripPIDFCoefficents);
+                    //gripPose.setMode(DcMotorEx.RunMode.RUN_TO_POSITION);
                     manualMode = false;
                 }
 
@@ -216,26 +218,28 @@ public class BasicOmniOpMode_Linear extends LinearOpMode {
                     gripPose.setTargetPosition(gripHomePosition);
                     arm.setPower(armSpeed);
                     gripPose.setPower(armSpeed);
-                   // arm.setPIDFCoefficients(DcMotorEx.RunMode.RUN_TO_POSITION, new PIDFCoefficients());
-                    arm.setMode(DcMotorEx.RunMode.RUN_TO_POSITION);
-                    gripPose.setMode(DcMotorEx.RunMode.RUN_TO_POSITION);
-                    //  grip.setPosition(wristUpPosition);
+                    arm.setPIDFCoefficients(DcMotorEx.RunMode.RUN_TO_POSITION, armPIDFCoefficents);
+                    //arm.setMode(DcMotorEx.RunMode.RUN_TO_POSITION);
+                    gripPose.setPIDFCoefficients(DcMotor.RunMode.RUN_TO_POSITION, gripPIDFCoefficents);
+                    //gripPose.setMode(DcMotorEx.RunMode.RUN_TO_POSITION);
                 } else if (gamepad2.circle) {
                     arm.setTargetPosition(armIntakePosition);
                     gripPose.setTargetPosition(gripIntakePosition);
                     arm.setPower(armSpeed);
                     gripPose.setPower(armSpeed);
-                    arm.setMode(DcMotorEx.RunMode.RUN_TO_POSITION);
-                    gripPose.setMode(DcMotorEx.RunMode.RUN_TO_POSITION);
-                    // grip.setPosition(wristDownPosition);
+                    arm.setPIDFCoefficients(DcMotorEx.RunMode.RUN_TO_POSITION, armPIDFCoefficents);
+                    //arm.setMode(DcMotorEx.RunMode.RUN_TO_POSITION);
+                    gripPose.setPIDFCoefficients(DcMotor.RunMode.RUN_TO_POSITION, gripPIDFCoefficents);
+                    //gripPose.setMode(DcMotorEx.RunMode.RUN_TO_POSITION);
                 } else if (gamepad2.triangle) {
                     arm.setTargetPosition(armScorePosition);
                     gripPose.setTargetPosition(gripScorePosition);
                     arm.setPower(armSpeed);
                     gripPose.setPower(armSpeed);
-                    arm.setMode(DcMotorEx.RunMode.RUN_TO_POSITION);
-                    gripPose.setMode(DcMotorEx.RunMode.RUN_TO_POSITION);
-                    // grip.setPosition(wristUpPosition);
+                    arm.setPIDFCoefficients(DcMotorEx.RunMode.RUN_TO_POSITION, armPIDFCoefficents);
+                    //arm.setMode(DcMotorEx.RunMode.RUN_TO_POSITION);
+                    gripPose.setPIDFCoefficients(DcMotor.RunMode.RUN_TO_POSITION, gripPIDFCoefficents);
+                    //gripPose.setMode(DcMotorEx.RunMode.RUN_TO_POSITION);
                 }
             }
 
@@ -244,8 +248,8 @@ public class BasicOmniOpMode_Linear extends LinearOpMode {
                     Math.abs(arm.getTargetPosition() - arm.getTargetPosition()) <= armShutdownThreshold &&
                    // arm.getCurrentPosition() <= armShutdownThreshold &&
                     gripPose.getMode() == DcMotorEx.RunMode.RUN_TO_POSITION &&
-                    Math.abs(gripPose.getTargetPosition() - gripPose.getCurrentPosition()) <= gripShutdownThreshold &&
-                   // gripPose.getCurrentPosition() <= gripShutdownThreshold
+                    Math.abs(gripPose.getTargetPosition() - gripPose.getCurrentPosition()) <= gripShutdownThreshold
+                   //&& gripPose.getCurrentPosition() <= gripShutdownThreshold
             ) {
                 arm.setPower(0.0);
                 gripPose.setPower(0.0);

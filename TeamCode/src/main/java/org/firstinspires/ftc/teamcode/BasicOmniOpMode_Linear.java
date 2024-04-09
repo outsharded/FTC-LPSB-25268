@@ -164,7 +164,7 @@ public class BasicOmniOpMode_Linear extends LinearOpMode {
                 isEndGame = true;
             }
 
-            if (sinceStart.seconds() == 90) {
+            if (sinceStart.seconds() > 90 && sinceStart.seconds() < 90.1) {
                 gamepad1.rumble(500);
                 gamepad2.rumble(500);
                 gamepad1.setLedColor(1, 0, 0, 30000);
@@ -188,7 +188,7 @@ public class BasicOmniOpMode_Linear extends LinearOpMode {
 
 
             manualArmPower = gamepad2.right_trigger - gamepad2.left_trigger;
-            manualGripPower  = gamepad2.dpad_left ? 1.0 : gamepad2.dpad_right ? 1.0 : 0.0;
+            manualGripPower  = gamepad2.dpad_left ? armSpeed : gamepad2.dpad_right ? -armSpeed : 0.0;
           //  manualGripPower = gamepad2.right_stick_y;
             if (Math.abs(manualArmPower) > armManualDeadband || Math.abs(manualGripPower) > armManualDeadband) {
                 if (!manualMode) {
@@ -215,38 +215,17 @@ public class BasicOmniOpMode_Linear extends LinearOpMode {
 
                 //preset buttons
                 if (gamepad2.square) {
-                    arm.setTargetPosition(armHomePosition);
-                    gripPose.setTargetPosition(gripHomePosition);
-                    arm.setPower(armSpeed);
-                    gripPose.setPower(armSpeed);
-                    arm.setPIDFCoefficients(DcMotorEx.RunMode.RUN_TO_POSITION, armPIDFCoefficents);
-                    //arm.setMode(DcMotorEx.RunMode.RUN_TO_POSITION);
-                    gripPose.setPIDFCoefficients(DcMotor.RunMode.RUN_TO_POSITION, gripPIDFCoefficents);
-                    //gripPose.setMode(DcMotorEx.RunMode.RUN_TO_POSITION);
+                    armToPosition(armHomePosition, gripHomePosition);
                 } else if (gamepad2.circle) {
-                    arm.setTargetPosition(armIntakePosition);
-                    gripPose.setTargetPosition(gripIntakePosition);
-                    arm.setPower(armSpeed);
-                    gripPose.setPower(armSpeed);
-                    arm.setPIDFCoefficients(DcMotorEx.RunMode.RUN_TO_POSITION, armPIDFCoefficents);
-                    //arm.setMode(DcMotorEx.RunMode.RUN_TO_POSITION);
-                    gripPose.setPIDFCoefficients(DcMotor.RunMode.RUN_TO_POSITION, gripPIDFCoefficents);
-                    //gripPose.setMode(DcMotorEx.RunMode.RUN_TO_POSITION);
+                    armToPosition(armIntakePosition, gripIntakePosition);
                 } else if (gamepad2.triangle) {
-                    arm.setTargetPosition(armScorePosition);
-                    gripPose.setTargetPosition(gripScorePosition);
-                    arm.setPower(armSpeed);
-                    gripPose.setPower(armSpeed);
-                    arm.setPIDFCoefficients(DcMotorEx.RunMode.RUN_TO_POSITION, armPIDFCoefficents);
-                    //arm.setMode(DcMotorEx.RunMode.RUN_TO_POSITION);
-                    gripPose.setPIDFCoefficients(DcMotor.RunMode.RUN_TO_POSITION, gripPIDFCoefficents);
-                    //gripPose.setMode(DcMotorEx.RunMode.RUN_TO_POSITION);
+                    armToPosition(armScorePosition, gripScorePosition);
                 }
             }
 
             if (!manualMode &&
                     arm.getMode() == DcMotorEx.RunMode.RUN_TO_POSITION &&
-                    Math.abs(arm.getTargetPosition() - arm.getTargetPosition()) <= armShutdownThreshold &&
+                    Math.abs(arm.getTargetPosition() - arm.getCurrentPosition()) <= armShutdownThreshold &&
                    // arm.getCurrentPosition() <= armShutdownThreshold &&
                     gripPose.getMode() == DcMotorEx.RunMode.RUN_TO_POSITION &&
                     Math.abs(gripPose.getTargetPosition() - gripPose.getCurrentPosition()) <= gripShutdownThreshold
@@ -294,4 +273,14 @@ public class BasicOmniOpMode_Linear extends LinearOpMode {
         }
     }
 
+    private void armToPosition(int armPosition, int gripPosePosition) {
+        arm.setTargetPosition(armPosition);
+        gripPose.setTargetPosition(gripPosePosition);
+        arm.setPower(armSpeed);
+        gripPose.setPower(armSpeed);
+        arm.setPIDFCoefficients(DcMotorEx.RunMode.RUN_TO_POSITION, armPIDFCoefficents);
+        //arm.setMode(DcMotorEx.RunMode.RUN_TO_POSITION);
+        gripPose.setPIDFCoefficients(DcMotor.RunMode.RUN_TO_POSITION, gripPIDFCoefficents);
+        //gripPose.setMode(DcMotorEx.RunMode.RUN_TO_POSITION);
+    }
 }

@@ -1,13 +1,13 @@
 package org.firstinspires.ftc.teamcode;
 
+import com.acmerobotics.roadrunner.geometry.Pose2d;
+import com.acmerobotics.roadrunner.geometry.Vector2d;
+import com.acmerobotics.roadrunner.trajectory.Trajectory;
 import com.qualcomm.hardware.rev.RevHubOrientationOnRobot;
 import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode;
 import com.qualcomm.robotcore.eventloop.opmode.Autonomous;
 import com.qualcomm.robotcore.hardware.DcMotorEx;
 import com.qualcomm.robotcore.hardware.IMU;
-import org.firstinspires.ftc.robotcore.external.navigation.AngleUnit;
-import org.firstinspires.ftc.robotcore.external.navigation.AngularVelocity;
-import org.firstinspires.ftc.robotcore.external.navigation.YawPitchRollAngles;
 
 import com.qualcomm.robotcore.hardware.Servo;
 import com.qualcomm.robotcore.util.ElapsedTime;
@@ -17,6 +17,7 @@ import org.firstinspires.ftc.robotcore.external.hardware.camera.WebcamName;
 import org.firstinspires.ftc.robotcore.external.tfod.Recognition;
 import org.firstinspires.ftc.vision.VisionPortal;
 import org.firstinspires.ftc.vision.tfod.TfodProcessor;
+import org.firstinspires.ftc.teamcode.drive.SampleMecanumDrive;
 
 import java.util.List;
 /*
@@ -34,11 +35,7 @@ public class AutoComputerVision extends LinearOpMode {
     private DcMotorEx arm = null;
     private DcMotorEx gripPose = null;
     private Servo grip = null;
-    private IMU imu = null;
 
-    private Double yaw = 0.0;
-    private Double pitch = 0.0;
-    private Double roll = 0.0;
 
     private double xPos = 0.0;
 
@@ -49,10 +46,6 @@ public class AutoComputerVision extends LinearOpMode {
             "Pixel",
     };
     private VisionPortal visionPortal;
-
-    private static final int[] wheelPosition1 = {1000, 1000, 1000, 1000}; // Example values
-    private static final int[] wheelPosition2 = {1550, 1550, 1550, 1550}; // Example values
-    private static final int[] wheelPosition3 = {3000, 3000, 3000, 3000}; // Example values
 
     // Define arm and gripPose positions and gripper closed position
     private static final int armPosition = 200; // Example value
@@ -72,7 +65,6 @@ public class AutoComputerVision extends LinearOpMode {
         arm = hardwareMap.get(DcMotorEx.class, "arm");
         gripPose = hardwareMap.get(DcMotorEx.class, "gripPose");
         grip = hardwareMap.get(Servo.class, "grip");
-        imu = hardwareMap.get(IMU.class, "IMU");
 
         // Set motor directions
         leftFrontDrive.setDirection(DcMotorEx.Direction.REVERSE);
@@ -94,98 +86,56 @@ public class AutoComputerVision extends LinearOpMode {
         gripPose.setMode(DcMotorEx.RunMode.STOP_AND_RESET_ENCODER);
         gripPose.setMode(DcMotorEx.RunMode.RUN_USING_ENCODER);
 
-        imu.initialize(
-                new IMU.Parameters(
-                        new RevHubOrientationOnRobot(
-                                RevHubOrientationOnRobot.LogoFacingDirection.UP,
-                                RevHubOrientationOnRobot.UsbFacingDirection.BACKWARD
-                        )
-                )
-        );
+        SampleMecanumDrive drive = new SampleMecanumDrive(hardwareMap);
+        Pose2d startPose = new Pose2d(-34, 63, Math.toRadians(270));
+        drive.setPoseEstimate(startPose);
 
-        YawPitchRollAngles robotOrientation;
-        robotOrientation = imu.getRobotYawPitchRollAngles();
+        Trajectory leftSpike = drive.trajectoryBuilder(new Pose2d())
+                .splineTo(new Vector2d(-26, 32), Math.toRadians(300))
+                .build();
+
+        Trajectory centreSpike = drive.trajectoryBuilder(new Pose2d())
+                .splineTo(new Vector2d(-34, 36), Math.toRadians(270))
+                .build();
+
+        Trajectory rightSpike = drive.trajectoryBuilder(new Pose2d())
+                .splineTo(new Vector2d(-42, 36), Math.toRadians(240))
+                .build();
+
 
         grip.setPosition(gripperOpenPosition);
 
 
         waitForStart();
         doTfod();
-        if (opModeIsActive()) {
-            yaw   = robotOrientation.getYaw(AngleUnit.DEGREES);
-            pitch = robotOrientation.getPitch(AngleUnit.DEGREES);
-            roll  = robotOrientation.getRoll(AngleUnit.DEGREES);
 
-            // Drive to appropriate wheel positions based on xPos
-
-            if (xPos <= 100) {
-                driveToPosition(wheelPosition1);
-            } else if (xPos <= 200) {
-                driveToPosition(wheelPosition2);
-            } else if (xPos > 200) {
-                driveToPosition(wheelPosition3);
-            }
-
-            // Set arm and gripPose positions
-            arm.setTargetPosition(armPosition);
-            gripPose.setTargetPosition(gripPosePosition);
-            arm.setPower(1.0);
-            gripPose.setPower(1.0);
-            arm.setMode(DcMotorEx.RunMode.RUN_TO_POSITION);
-            gripPose.setMode(DcMotorEx.RunMode.RUN_TO_POSITION);
-
-            // Wait for arm and gripPose to reach target positions
-            while (arm.isBusy() || gripPose.isBusy() || leftFrontDrive.isBusy() || leftBackDrive.isBusy() || rightFrontDrive.isBusy() || rightBackDrive.isBusy()) {
-                // Do nothing
-                if (runtime.seconds() >= 15) {
-                    break;
-                }
-            }
-
-            grip.setPosition(gripperClosedPosition);
+        if (xPos <= 100) {
+            drive.followTrajectory(leftSpike);
+        } else if (xPos <= 200) {
+            drive.followTrajectory(centreSpike);
+        } else if (xPos > 200) {
+            drive.followTrajectory(rightSpike);
         }
+
+        arm.setTargetPosition(armPosition);
+        gripPose.setTargetPosition(gripPosePosition);
+        arm.setPower(0.5);
+        gripPose.setPower(0.5);
+        arm.setMode(DcMotorEx.RunMode.RUN_TO_POSITION);
+        gripPose.setMode(DcMotorEx.RunMode.RUN_TO_POSITION);
+
+        while (arm.isBusy() || gripPose.isBusy() || leftFrontDrive.isBusy() || leftBackDrive.isBusy() || rightFrontDrive.isBusy() || rightBackDrive.isBusy()) {
+            // Do nothing
+            if (runtime.seconds() >= 15) {
+                break;
+            }
+        }
+
+        grip.setPosition(gripperClosedPosition);
+
     }
 
     // Method to drive to specified wheel positions
-    private void driveToPosition(int[] positions) {
-        ElapsedTime driveTime = new ElapsedTime();
-
-        leftFrontDrive.setTargetPosition(positions[0]);
-        leftBackDrive.setTargetPosition(positions[1]);
-        rightFrontDrive.setTargetPosition(positions[2]);
-        rightBackDrive.setTargetPosition(positions[3]);
-
-        // Set motor powers and run to position
-        leftFrontDrive.setPower(0.5);
-        leftBackDrive.setPower(0.5);
-        rightFrontDrive.setPower(0.5);
-        rightBackDrive.setPower(0.5);
-
-        leftFrontDrive.setMode(DcMotorEx.RunMode.RUN_TO_POSITION);
-        leftBackDrive.setMode(DcMotorEx.RunMode.RUN_TO_POSITION);
-        rightFrontDrive.setMode(DcMotorEx.RunMode.RUN_TO_POSITION);
-        rightBackDrive.setMode(DcMotorEx.RunMode.RUN_TO_POSITION);
-
-        // Wait for motors to reach target positions
-        while (leftFrontDrive.isBusy() || leftBackDrive.isBusy() || rightFrontDrive.isBusy() || rightBackDrive.isBusy()) {
-            // Do nothing
-            if (yaw < -10 || yaw > 10) {
-                telemetry.addData("Heading", "Heading is over 10 degrees off!");
-                telemetry.update();
-            }
-
-            if (driveTime.seconds() >= 10) {
-                break;
-            }
-
-        }
-
-        // Stop the motors
-        leftFrontDrive.setPower(0.0);
-        leftBackDrive.setPower(0.0);
-        rightFrontDrive.setPower(0.0);
-        rightBackDrive.setPower(0.0);
-    }
 
     /**
      * Initialize the TensorFlow Object Detection processor.
@@ -227,7 +177,6 @@ public class AutoComputerVision extends LinearOpMode {
 // Set the stream format; MJPEG uses less bandwidth than default YUY2.
         builder.setStreamFormat(VisionPortal.StreamFormat.YUY2);
         builder.setAutoStopLiveView(false);
-
 // Set and enable the processor.
         builder.addProcessor(tfod);
 

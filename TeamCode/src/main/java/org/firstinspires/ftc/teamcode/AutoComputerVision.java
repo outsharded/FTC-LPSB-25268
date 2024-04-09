@@ -4,9 +4,9 @@ import com.qualcomm.hardware.rev.RevHubOrientationOnRobot;
 import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode;
 import com.qualcomm.robotcore.eventloop.opmode.Autonomous;
 import com.qualcomm.robotcore.hardware.DcMotorEx;
+import com.qualcomm.robotcore.hardware.DcMotorSimple;
 import com.qualcomm.robotcore.hardware.IMU;
 import org.firstinspires.ftc.robotcore.external.navigation.AngleUnit;
-import org.firstinspires.ftc.robotcore.external.navigation.AngularVelocity;
 import org.firstinspires.ftc.robotcore.external.navigation.YawPitchRollAngles;
 
 import com.qualcomm.robotcore.hardware.Servo;
@@ -50,13 +50,16 @@ public class AutoComputerVision extends LinearOpMode {
     };
     private VisionPortal visionPortal;
 
-    private static final int[] wheelPosition1 = {1000, 1000, 1000, 1000}; // Example values
-    private static final int[] wheelPosition2 = {1550, 1550, 1550, 1550}; // Example values
-    private static final int[] wheelPosition3 = {3000, 3000, 3000, 3000}; // Example values
-
+    private static final int[] wheelPositionLeft = {1100, 2000, 1800, 1300}; // Example values
+    private static final int[] wheelPositionCentre = {1550, 1550, 1550, 1550}; // Example values
+    private static final int[] wheelPositionRight = {2000, 1100, 1300, 1800}; // Example values
+    private static final int[] wheelPositionNull = {0,0,0,0};
     // Define arm and gripPose positions and gripper closed position
-    private static final int armPosition = 200; // Example value
-    private static final int gripPosePosition = 200; // Example value
+    private static final int armPosition = 210; // Example value
+    private static final int gripPosePosition = 280; // Example value
+
+    private static final int armPositionUp = 300; // Example value
+    private static final int gripPosePositionUp = 280; // Example value
     private static final double gripperClosedPosition = 0.3; // Example value
     private static final double gripperOpenPosition = 0.6; // Example value
 
@@ -79,6 +82,8 @@ public class AutoComputerVision extends LinearOpMode {
         leftBackDrive.setDirection(DcMotorEx.Direction.REVERSE);
         rightFrontDrive.setDirection(DcMotorEx.Direction.FORWARD);
         rightBackDrive.setDirection(DcMotorEx.Direction.FORWARD);
+        arm.setDirection(DcMotorEx.Direction.REVERSE);
+        gripPose.setDirection(DcMotorEx.Direction.REVERSE);
 
         // Set motor run modes
         leftFrontDrive.setMode(DcMotorEx.RunMode.STOP_AND_RESET_ENCODER);
@@ -119,18 +124,22 @@ public class AutoComputerVision extends LinearOpMode {
             // Drive to appropriate wheel positions based on xPos
 
             if (xPos <= 100) {
-                driveToPosition(wheelPosition1);
+                driveToPosition(wheelPositionLeft);
             } else if (xPos <= 200) {
-                driveToPosition(wheelPosition2);
+                driveToPosition(wheelPositionCentre);
             } else if (xPos > 200) {
-                driveToPosition(wheelPosition3);
+                driveToPosition(wheelPositionRight);
+            } else {
+                driveToPosition(wheelPositionCentre);
+                telemetry.addData("Vision Error", "No xPos supplied.");
             }
+
 
             // Set arm and gripPose positions
             arm.setTargetPosition(armPosition);
             gripPose.setTargetPosition(gripPosePosition);
-            arm.setPower(1.0);
-            gripPose.setPower(1.0);
+            arm.setPower(0.6);
+            gripPose.setPower(0.6);
             arm.setMode(DcMotorEx.RunMode.RUN_TO_POSITION);
             gripPose.setMode(DcMotorEx.RunMode.RUN_TO_POSITION);
 
@@ -143,16 +152,40 @@ public class AutoComputerVision extends LinearOpMode {
             }
 
             grip.setPosition(gripperClosedPosition);
+            while (runtime.seconds() < 16) {
+                // do fuck all
+            }
+
+            arm.setTargetPosition(armPositionUp);
+            gripPose.setTargetPosition(gripPosePositionUp);
+            arm.setPower(0.6);
+            gripPose.setPower(0.6);
+            arm.setMode(DcMotorEx.RunMode.RUN_TO_POSITION);
+            gripPose.setMode(DcMotorEx.RunMode.RUN_TO_POSITION);
+
+            while (runtime.seconds() < 20) {
+                // do fuck all
+            }
+
+            driveToPosition(wheelPositionNull);
+            arm.setTargetPosition(0);
+            gripPose.setTargetPosition(0);
+            arm.setPower(1.0);
+            gripPose.setPower(1.0);
+            arm.setMode(DcMotorEx.RunMode.RUN_TO_POSITION);
+            gripPose.setMode(DcMotorEx.RunMode.RUN_TO_POSITION);
+            }
+
         }
-    }
+
 
     // Method to drive to specified wheel positions
     private void driveToPosition(int[] positions) {
         ElapsedTime driveTime = new ElapsedTime();
 
         leftFrontDrive.setTargetPosition(positions[0]);
-        leftBackDrive.setTargetPosition(positions[1]);
-        rightFrontDrive.setTargetPosition(positions[2]);
+        rightFrontDrive.setTargetPosition(positions[1]);
+        leftBackDrive.setTargetPosition(positions[2]);
         rightBackDrive.setTargetPosition(positions[3]);
 
         // Set motor powers and run to position

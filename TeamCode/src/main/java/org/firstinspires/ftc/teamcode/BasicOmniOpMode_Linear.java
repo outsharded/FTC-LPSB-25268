@@ -147,6 +147,7 @@ public class BasicOmniOpMode_Linear extends LinearOpMode {
         arm.setDirection(DcMotorEx.Direction.REVERSE);
         arm.setZeroPowerBehavior(DcMotorEx.ZeroPowerBehavior.BRAKE);
 
+        gripPose.setDirection(DcMotorEx.Direction.REVERSE);
         gripPose.setZeroPowerBehavior(DcMotorEx.ZeroPowerBehavior.BRAKE);
 
 

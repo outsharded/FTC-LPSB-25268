@@ -33,6 +33,7 @@ public class AutoComputerVision extends LinearOpMode {
     private DcMotorEx rightBackDrive = null;
     private DcMotorEx arm = null;
     private DcMotorEx gripPose = null;
+    private Servo grip = null;
     private IMU imu = null;
 
     private Double yaw = 0.0;
@@ -47,13 +48,8 @@ public class AutoComputerVision extends LinearOpMode {
     private static final String[] LABELS = {
             "Pixel",
     };
-    /**
-     * The variable to store our instance of the vision portal.
-     */
     private VisionPortal visionPortal;
-    // MM
 
-    // Define three sets of wheel positions
     private static final int[] wheelPosition1 = {1000, 1000, 1000, 1000}; // Example values
     private static final int[] wheelPosition2 = {1550, 1550, 1550, 1550}; // Example values
     private static final int[] wheelPosition3 = {3000, 3000, 3000, 3000}; // Example values
@@ -75,7 +71,7 @@ public class AutoComputerVision extends LinearOpMode {
         rightBackDrive = hardwareMap.get(DcMotorEx.class, "BackRight");
         arm = hardwareMap.get(DcMotorEx.class, "arm");
         gripPose = hardwareMap.get(DcMotorEx.class, "gripPose");
-        Servo grip = hardwareMap.get(Servo.class, "grip");
+        grip = hardwareMap.get(Servo.class, "grip");
         imu = hardwareMap.get(IMU.class, "IMU");
 
         // Set motor directions

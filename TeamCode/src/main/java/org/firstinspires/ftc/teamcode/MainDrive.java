@@ -68,9 +68,9 @@ import com.qualcomm.robotcore.util.ElapsedTime;
  * Remove or comment out the @Disabled line to add this OpMode to the Driver Station OpMode list
  */
 
-@TeleOp(name="Mecanum Drive Test", group="Linear OpMode")
+@TeleOp(name="MainDrive", group="Linear OpMode")
 //@Disabled
-public class BasicOmniOpMode_Linear extends LinearOpMode {
+public class MainDrive extends LinearOpMode {
 
     // Declare OpMode members for each of the 4 motors.
     private ElapsedTime runtime = new ElapsedTime();
@@ -87,11 +87,11 @@ public class BasicOmniOpMode_Linear extends LinearOpMode {
     private boolean manualMode = false;
     private final double armManualDeadband = 0.03;
 
-    private final double gripperClosedPosition = 0.3;
-    private final double gripperOpenPosition = 0.5;
+    private final double gripperClosedPosition = 0.0;
+    private final double gripperOpenPosition = 0.055;
 
     private final double planeLauncherPreset = 0.3;
-    private final double planeLauncherActive = 1.0;
+    private final double planeLauncherActive = 0.8;
 
     private final PIDFCoefficients armPIDFCoefficents = new PIDFCoefficients(0,0,0,0);
     private final PIDFCoefficients gripPIDFCoefficents = new PIDFCoefficients(0,0,0,0);
@@ -109,6 +109,11 @@ public class BasicOmniOpMode_Linear extends LinearOpMode {
     private final double armSpeed = 0.5;
     private boolean isEndGame = false;
 
+
+    private double armCurrentVelocity = 0.0;
+    private double gripCurrentVelocity = 0.0;
+    private double maxArmVelocity = 0.0;
+    private double maxGripVelocity = 0.0;
     @Override
     public void runOpMode() {
         double manualArmPower;
@@ -142,13 +147,13 @@ public class BasicOmniOpMode_Linear extends LinearOpMode {
         leftFrontDrive.setDirection(DcMotorEx.Direction.REVERSE);
         leftBackDrive.setDirection(DcMotorEx.Direction.REVERSE);
         rightFrontDrive.setDirection(DcMotorEx.Direction.FORWARD);
-        rightBackDrive.setDirection(DcMotorEx.Direction.FORWARD);
+        rightBackDrive.setDirection(DcMotorEx.Direction.REVERSE;
 
         arm.setDirection(DcMotorEx.Direction.REVERSE);
         arm.setZeroPowerBehavior(DcMotorEx.ZeroPowerBehavior.BRAKE);
 
         gripPose.setDirection(DcMotorEx.Direction.REVERSE);
-        gripPose.setZeroPowerBehavior(DcMotorEx.ZeroPowerBehavior.BRAKE);
+        gripPose.setZeroPowerBehavior(DcMotorEx.ZeroPowerBehavior.FLOAT);
 
 
         // Wait for the game to start (driver presses PLAY)
@@ -186,9 +191,8 @@ public class BasicOmniOpMode_Linear extends LinearOpMode {
             double rightBackPower = (axial + lateral - yaw) * wheelSpeed;
 
 
-
-            manualArmPower = gamepad2.right_trigger - gamepad2.left_trigger;
-            manualGripPower  = gamepad2.dpad_left ? armSpeed : gamepad2.dpad_right ? -armSpeed : 0.0;
+            manualArmPower = -gamepad2.left_stick_y;
+            manualGripPower  = -gamepad2.right_stick_y;
           //  manualGripPower = gamepad2.right_stick_y;
             if (Math.abs(manualArmPower) > armManualDeadband || Math.abs(manualGripPower) > armManualDeadband) {
                 if (!manualMode) {
@@ -263,12 +267,14 @@ public class BasicOmniOpMode_Linear extends LinearOpMode {
             leftBackDrive.setPower(leftBackPower);
             rightBackDrive.setPower(rightBackPower);
 
+            velocity();
             // Show the elapsed game time and wheel power.
+            telemetry.addData("Wheel velocities", "%8.2f, %8.2f", maxArmVelocity, maxGripVelocity)
             telemetry.addData("Status", "Run Time: " + runtime.toString());
             telemetry.addData("Front left/Right", "%4.2f, %4.2f", leftFrontPower, rightFrontPower);
             telemetry.addData("Back  left/Right", "%4.2f, %4.2f", leftBackPower, rightBackPower);
             telemetry.addData("Arm/Grip Power", "%4.2f, %4.2f", arm.getPower(), gripPose.getPower());
-            telemetry.addData("Grip", "%4.2f, %4.2f", grip.getPosition());
+            telemetry.addData("Grip", "%4.2f", grip.getPosition());
             telemetry.update();
         }
     }
@@ -283,4 +289,16 @@ public class BasicOmniOpMode_Linear extends LinearOpMode {
         gripPose.setPIDFCoefficients(DcMotor.RunMode.RUN_TO_POSITION, gripPIDFCoefficents);
         //gripPose.setMode(DcMotorEx.RunMode.RUN_TO_POSITION);
     }
+
+    private void velocity() {
+        armCurrentVelocity = arm.getVelocity();
+        gripCurrentVelocity = gripPose.getVelocity();
+        if (armCurrentVelocity > maxArmVelocity) {
+            maxArmVelocity = armCurrentVelocity;
+        }
+        if (gripCurrentVelocity > maxGripVelocity) {
+            maxGripVelocity = gripCurrentVelocity;
+        }
+    }
+
 }

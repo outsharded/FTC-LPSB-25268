@@ -37,41 +37,18 @@ import com.qualcomm.robotcore.hardware.PIDFCoefficients;
 import com.qualcomm.robotcore.hardware.Servo;
 import com.qualcomm.robotcore.util.ElapsedTime;
 
-/*
- * This file contains an example of a Linear "OpMode".
- * An OpMode is a 'program' that runs in either the autonomous or the teleop period of an FTC match.
- * The names of OpModes appear on the menu of the FTC Driver Station.
- * When a selection is made from the menu, the corresponding OpMode is executed.
- *
- * This particular OpMode illustrates driving a 4-motor Omni-Directional (or Holonomic) robot.
- * This code will work with either a Mecanum-Drive or an X-Drive train.
- * Both of these drives are illustrated at https://gm0.org/en/latest/docs/robot-design/drivetrains/holonomic.html
- * Note that a Mecanum drive must display an X roller-pattern when viewed from above.
- *
- * Also note that it is critical to set the correct rotation direction for each motor.  See details below.
- *
- * Holonomic drives provide the ability for the robot to move in three axes (directions) simultaneously.
- * Each motion axis is controlled by one Joystick axis.
- *
- * 1) Axial:    Driving forward and backward               Left-joystick Forward/Backward
- * 2) Lateral:  Strafing right and left                     Left-joystick Right and Left
- * 3) Yaw:      Rotating Clockwise and counter clockwise    Right-joystick Right and Left
- *
- * This code is written assuming that the right-side motors need to be reversed for the robot to drive forward.
- * When you first test your robot, if it moves backward when you push the left stick forward, then you must flip
- * the direction of all 4 motors (see code below).
- *
- * Use Android Studio to Copy this Class, and Paste it into your team's code folder with a new name.
- * Remove or comment out the @Disabled line to add this OpMode to the Driver Station OpMode list
- */
 
 @TeleOp(name="MainDrive", group="Linear OpMode")
 //@Disabled
 public class MainDrive extends LinearOpMode {
 
-    // Declare OpMode members for each of the 4 motors.
+    // System monitor
     private ElapsedTime runtime = new ElapsedTime();
+    private ElapsedTime loopTime = new ElapsedTime();
     private ElapsedTime sinceStart = new ElapsedTime();
+    private boolean manualMode = false;
+    private boolean isEndGame = false;
+    // Hardwarew
     private DcMotorEx leftFrontDrive = null;
     private DcMotorEx leftBackDrive = null;
     private DcMotorEx rightFrontDrive = null;
@@ -81,7 +58,7 @@ public class MainDrive extends LinearOpMode {
     private Servo grip = null;
     private Servo planeLaucher = null;
 
-    private boolean manualMode = false;
+    // settings
     private final double armManualDeadband = 0.03;
 
     private final double gripperClosedPosition = 0.0;
@@ -104,9 +81,8 @@ public class MainDrive extends LinearOpMode {
 
     private final double wheelSpeed = 0.6;
     private final double armSpeed = 0.5;
-    private boolean isEndGame = false;
 
-
+    // external monitor
     private double armCurrentVelocity = 0.0;
     private double gripCurrentVelocity = 0.0;
     private double maxArmVelocity = 0.0;
@@ -161,6 +137,7 @@ public class MainDrive extends LinearOpMode {
         waitForStart();
         runtime.reset();
         sinceStart.reset();
+        loopTime.reset();
         // run until the end of the match (driver presses STOP)
         while (opModeIsActive()) {
             if (sinceStart.seconds() <= 90) {
@@ -273,7 +250,10 @@ public class MainDrive extends LinearOpMode {
             telemetry.addData("Back  left/Right", "%4.2f, %4.2f", leftBackPower, rightBackPower);
             telemetry.addData("Arm/Grip Power", "%4.2f, %4.2f", arm.getPower(), gripPose.getPower());
             telemetry.addData("Grip", "%4.2f", grip.getPosition());
+            telemetry.addData("Loop Time", loopTime.milliseconds());
             telemetry.update();
+
+            loopTime.reset();
         }
     }
 

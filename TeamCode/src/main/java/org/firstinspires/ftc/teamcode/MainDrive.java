@@ -29,13 +29,10 @@
 
 package org.firstinspires.ftc.teamcode;
 
-//import com.qualcomm.robotcore.eventloop.opmode.Disabled;
 import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode;
 import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
-//import com.qualcomm.robotcore.hardware.DcMotor;
 import com.qualcomm.robotcore.hardware.DcMotor;
 import com.qualcomm.robotcore.hardware.DcMotorEx;
-//import com.qualcomm.robotcore.hardware.DcMotorExSimple;
 import com.qualcomm.robotcore.hardware.PIDFCoefficients;
 import com.qualcomm.robotcore.hardware.Servo;
 import com.qualcomm.robotcore.util.ElapsedTime;
@@ -114,6 +111,7 @@ public class MainDrive extends LinearOpMode {
     private double gripCurrentVelocity = 0.0;
     private double maxArmVelocity = 0.0;
     private double maxGripVelocity = 0.0;
+
     @Override
     public void runOpMode() {
         double manualArmPower;
@@ -147,13 +145,13 @@ public class MainDrive extends LinearOpMode {
         leftFrontDrive.setDirection(DcMotorEx.Direction.REVERSE);
         leftBackDrive.setDirection(DcMotorEx.Direction.REVERSE);
         rightFrontDrive.setDirection(DcMotorEx.Direction.FORWARD);
-        rightBackDrive.setDirection(DcMotorEx.Direction.REVERSE;
-
+        rightBackDrive.setDirection(DcMotorEx.Direction.REVERSE);
         arm.setDirection(DcMotorEx.Direction.REVERSE);
         arm.setZeroPowerBehavior(DcMotorEx.ZeroPowerBehavior.BRAKE);
 
         gripPose.setDirection(DcMotorEx.Direction.REVERSE);
         gripPose.setZeroPowerBehavior(DcMotorEx.ZeroPowerBehavior.FLOAT);
+
 
 
         // Wait for the game to start (driver presses PLAY)
@@ -237,8 +235,8 @@ public class MainDrive extends LinearOpMode {
             ) {
                 arm.setPower(0.0);
                 gripPose.setPower(0.0);
-                arm.setMode(DcMotorEx.RunMode.RUN_WITHOUT_ENCODER);
-                gripPose.setMode(DcMotorEx.RunMode.RUN_WITHOUT_ENCODER);
+                arm.setMode(DcMotorEx.RunMode.RUN_USING_ENCODER);
+                gripPose.setMode(DcMotorEx.RunMode.RUN_USING_ENCODER);
             }
 
             /*
@@ -269,7 +267,7 @@ public class MainDrive extends LinearOpMode {
 
             velocity();
             // Show the elapsed game time and wheel power.
-            telemetry.addData("Wheel velocities", "%8.2f, %8.2f", maxArmVelocity, maxGripVelocity)
+            telemetry.addData("Wheel velocities", "%8.2f, %8.2f", maxArmVelocity, maxGripVelocity);
             telemetry.addData("Status", "Run Time: " + runtime.toString());
             telemetry.addData("Front left/Right", "%4.2f, %4.2f", leftFrontPower, rightFrontPower);
             telemetry.addData("Back  left/Right", "%4.2f, %4.2f", leftBackPower, rightBackPower);

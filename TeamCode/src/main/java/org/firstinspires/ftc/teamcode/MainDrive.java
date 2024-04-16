@@ -56,7 +56,7 @@ public class MainDrive extends LinearOpMode {
     private DcMotorEx arm = null;
     private DcMotorEx gripPose = null;
     private Servo grip = null;
-    private Servo planeLaucher = null;
+    private Servo planeLauncher = null;
 
     // settings
     private final double armManualDeadband = 0.03;
@@ -79,7 +79,7 @@ public class MainDrive extends LinearOpMode {
     private final int gripScorePosition = 600;
     private final int gripShutdownThreshold = 5;
 
-    private final double wheelSpeed = 0.6;
+    private final double wheelSpeed = 0.8;
     private final double armSpeed = 0.5;
 
     // external monitor
@@ -88,12 +88,16 @@ public class MainDrive extends LinearOpMode {
     private double maxArmVelocity = 0.0;
     private double maxGripVelocity = 0.0;
 
+    private int armPosition = 0;
+    private int gripPosition = 0;
+
     @Override
     public void runOpMode() {
+        // declare arm power varibles
         double manualArmPower;
         double manualGripPower;
-        // Initialize the hardware variables. Note that the strings used here must correspond
-        // to the names assigned during the robot configuration step on the DS or RC devices.
+
+        //declare hardware
         leftFrontDrive = hardwareMap.get(DcMotorEx.class, "FrontLeft");
         leftBackDrive = hardwareMap.get(DcMotorEx.class, "BackLeft");
         rightFrontDrive = hardwareMap.get(DcMotorEx.class, "FrontRight");
@@ -101,23 +105,14 @@ public class MainDrive extends LinearOpMode {
         arm = hardwareMap.get(DcMotorEx.class, "arm");
         gripPose = hardwareMap.get(DcMotorEx.class, "gripPose");
         grip = hardwareMap.get(Servo.class, "grip");
-        planeLaucher = hardwareMap.get(Servo.class, "planeLauncher");
+        planeLauncher = hardwareMap.get(Servo.class, "planeLauncher");
 
+        //initialise all the hardware with correct modes
         arm.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
         arm.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
         gripPose.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
         gripPose.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
 
-        // ########################################################################################
-        // !!!            IMPORTANT Drive Information. Test your motor directions.            !!!!!
-        // ########################################################################################
-        // Most robots need the motors on one side to be reversed to drive forward.
-        // The motor reversals shown here are for a "direct drive" robot (the wheels turn the same direction as the motor shaft)
-        // If your robot has additional gear reductions or uses a right-angled drive, it's important to ensure
-        // that your motors are turning in the correct direction.  So, start out with the reversals here, BUT
-        // when you first test your robot, push the left joystick forward and observe the direction the wheels turn.
-        // Reverse the direction (flip FORWARD <-> REVERSE ) of any wheel that runs backward
-        // Keep testing until ALL the wheels move the robot forward when you push the left joystick forward.
         leftFrontDrive.setDirection(DcMotorEx.Direction.REVERSE);
         leftBackDrive.setDirection(DcMotorEx.Direction.REVERSE);
         rightFrontDrive.setDirection(DcMotorEx.Direction.FORWARD);
@@ -128,23 +123,22 @@ public class MainDrive extends LinearOpMode {
         gripPose.setDirection(DcMotorEx.Direction.REVERSE);
         gripPose.setZeroPowerBehavior(DcMotorEx.ZeroPowerBehavior.FLOAT);
 
-
-
-        // Wait for the game to start (driver presses PLAY)
+        //inform driver hub that initalisation has completed
         telemetry.addData("Status", "Initialized");
         telemetry.update();
 
+        // Wait for the game to start (driver presses PLAY)
         waitForStart();
+        //start the game timers
         runtime.reset();
         sinceStart.reset();
         loopTime.reset();
+
         // run until the end of the match (driver presses STOP)
         while (opModeIsActive()) {
-            if (sinceStart.seconds() <= 90) {
-                isEndGame = true;
-            }
-
+            //check for endgame
             if (sinceStart.seconds() > 90 && sinceStart.seconds() < 90.1) {
+                isEndGame = true;
                 gamepad1.rumble(500);
                 gamepad2.rumble(500);
                 gamepad1.setLedColor(1, 0, 0, 30000);
@@ -152,39 +146,36 @@ public class MainDrive extends LinearOpMode {
                 telemetry.addLine("Endgame has begun.");
             }
 
-
-            // POV Mode uses left joystick to go forward & strafe, and right joystick to rotate.
-            double axial = -gamepad1.left_stick_y;  // Note: pushing stick forward gives negative value
+            //get all the inputs from gamepad sticks
+            double axial = -gamepad1.left_stick_y;
             double lateral = gamepad1.left_stick_x;
             double yaw = gamepad1.right_stick_x;
+            manualArmPower = -gamepad2.left_stick_y;
+            manualGripPower  = -gamepad2.right_stick_y;
 
-            // Combine the joystick requests for each axis-motion to determine each wheel's power.
-            // Set up a variable for each drive wheel to save the power level for telemetry.
+            // Math out the powers for the wheelbase
             double leftFrontPower = (axial + lateral + yaw) * wheelSpeed;
             double rightFrontPower = (axial - lateral - yaw) * wheelSpeed;
             double leftBackPower = (axial - lateral + yaw) * wheelSpeed;
             double rightBackPower = (axial + lateral - yaw) * wheelSpeed;
 
-
-            manualArmPower = -gamepad2.left_stick_y;
-            manualGripPower  = -gamepad2.right_stick_y;
-          //  manualGripPower = gamepad2.right_stick_y;
-            if (Math.abs(manualArmPower) > armManualDeadband || Math.abs(manualGripPower) > armManualDeadband) {
-                if (!manualMode) {
+            if (Math.abs(manualArmPower) > armManualDeadband || Math.abs(manualGripPower) > armManualDeadband) { //if powers being received are large enough
+                if (!manualMode) { // if the presets are running, stop them and give the driver control
                     arm.setPower(0.0);
                     gripPose.setPower(0.0);
-                    arm.setMode(DcMotorEx.RunMode.RUN_WITHOUT_ENCODER);
-                    gripPose.setMode(DcMotorEx.RunMode.RUN_WITHOUT_ENCODER);
+                    arm.setMode(DcMotorEx.RunMode.RUN_USING_ENCODER);
+                    gripPose.setMode(DcMotorEx.RunMode.RUN_USING_ENCODER);
                     manualMode = true;
                 }
+                //assign the powers to the arm motors
                 arm.setPower(manualArmPower * armSpeed);
                 gripPose.setPower(manualGripPower * armSpeed);
-            } else {
-                if (manualMode) {
+            } else { //if the sticks are not being used
+                if (manualMode) { // set the motors to be neutral
                     arm.setTargetPosition(arm.getCurrentPosition());
                     gripPose.setTargetPosition(gripPose.getCurrentPosition());
-                    arm.setPower(armSpeed);
-                    gripPose.setPower(armSpeed);
+                    arm.setPower(0.0);
+                    gripPose.setPower(0.0);
                     arm.setPIDFCoefficients(DcMotorEx.RunMode.RUN_TO_POSITION, armPIDFCoefficents);
                     //arm.setMode(DcMotorEx.RunMode.RUN_TO_POSITION);
                     gripPose.setPIDFCoefficients(DcMotor.RunMode.RUN_TO_POSITION, gripPIDFCoefficents);
@@ -202,6 +193,7 @@ public class MainDrive extends LinearOpMode {
                 }
             }
 
+            //check if the preset position has been reached
             if (!manualMode &&
                     arm.getMode() == DcMotorEx.RunMode.RUN_TO_POSITION &&
                     Math.abs(arm.getTargetPosition() - arm.getCurrentPosition()) <= armShutdownThreshold &&
@@ -209,50 +201,53 @@ public class MainDrive extends LinearOpMode {
                     gripPose.getMode() == DcMotorEx.RunMode.RUN_TO_POSITION &&
                     Math.abs(gripPose.getTargetPosition() - gripPose.getCurrentPosition()) <= gripShutdownThreshold
                    //&& gripPose.getCurrentPosition() <= gripShutdownThreshold
-            ) {
+            ) { //if preset has been reached, neutralise motors
                 arm.setPower(0.0);
                 gripPose.setPower(0.0);
                 arm.setMode(DcMotorEx.RunMode.RUN_USING_ENCODER);
                 gripPose.setMode(DcMotorEx.RunMode.RUN_USING_ENCODER);
             }
 
-            /*
-            leftFrontPower  = gamepad1.x ? 1.0 : 0.0;  // X gamepad
-            leftBackPower   = gamepad1.a ? 1.0 : 0.0;  // A gamepad
-            rightFrontPower = gamepad1.y ? 1.0 : 0.0;  // Y gamepad
-            rightBackPower  = gamepad1.b ? 1.0 : 0.0;  // B gamepad
-            */
-
-            // Send all values to actuators
-
-            if (gamepad1.triangle || isEndGame) {
-                planeLaucher.setPosition(planeLauncherActive);
+            // CENTRESTAGE plane launcher
+            if (gamepad1.triangle && isEndGame) {
+                planeLauncher.setPosition(planeLauncherActive);
             } else if (gamepad1.circle) {
-                planeLaucher.setPosition(planeLauncherPreset);
+                planeLauncher.setPosition(planeLauncherPreset);
             }
 
+            //set grip position
             if (gamepad2.left_bumper) {
                 grip.setPosition(gripperOpenPosition);
             } else if (gamepad2.right_bumper) {
                 grip.setPosition(gripperClosedPosition);
             }
+
             // Send calculated power to wheels
             leftFrontDrive.setPower(leftFrontPower);
             rightFrontDrive.setPower(rightFrontPower);
             leftBackDrive.setPower(leftBackPower);
             rightBackDrive.setPower(rightBackPower);
 
+            //Telemetry section
+            //Get arm positions
+            armPosition = arm.getCurrentPosition();
+            gripPosition = gripPose.getCurrentPosition();
+
+            //Get velocities
             velocity();
-            // Show the elapsed game time and wheel power.
+            // Send all the data back to driver hub
             telemetry.addData("Wheel velocities", "%8.2f, %8.2f", maxArmVelocity, maxGripVelocity);
             telemetry.addData("Status", "Run Time: " + runtime.toString());
             telemetry.addData("Front left/Right", "%4.2f, %4.2f", leftFrontPower, rightFrontPower);
             telemetry.addData("Back  left/Right", "%4.2f, %4.2f", leftBackPower, rightBackPower);
             telemetry.addData("Arm/Grip Power", "%4.2f, %4.2f", arm.getPower(), gripPose.getPower());
+            telemetry.addData("Arm Position", armPosition);
+            telemetry.addData("Grip Position", gripPosition);
             telemetry.addData("Grip", "%4.2f", grip.getPosition());
             telemetry.addData("Loop Time", loopTime.milliseconds());
             telemetry.update();
 
+            //reset the loop timer
             loopTime.reset();
         }
     }
@@ -262,13 +257,14 @@ public class MainDrive extends LinearOpMode {
         gripPose.setTargetPosition(gripPosePosition);
         arm.setPower(armSpeed);
         gripPose.setPower(armSpeed);
+        //use PIDF to go to positions
         arm.setPIDFCoefficients(DcMotorEx.RunMode.RUN_TO_POSITION, armPIDFCoefficents);
         //arm.setMode(DcMotorEx.RunMode.RUN_TO_POSITION);
         gripPose.setPIDFCoefficients(DcMotor.RunMode.RUN_TO_POSITION, gripPIDFCoefficents);
         //gripPose.setMode(DcMotorEx.RunMode.RUN_TO_POSITION);
     }
 
-    private void velocity() {
+    private void velocity() { // check maximum velocities
         armCurrentVelocity = arm.getVelocity();
         gripCurrentVelocity = gripPose.getVelocity();
         if (armCurrentVelocity > maxArmVelocity) {

@@ -4,7 +4,6 @@ import com.qualcomm.hardware.rev.RevHubOrientationOnRobot;
 import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode;
 import com.qualcomm.robotcore.eventloop.opmode.Autonomous;
 import com.qualcomm.robotcore.hardware.DcMotorEx;
-import com.qualcomm.robotcore.hardware.DcMotorSimple;
 import com.qualcomm.robotcore.hardware.IMU;
 import org.firstinspires.ftc.robotcore.external.navigation.AngleUnit;
 import org.firstinspires.ftc.robotcore.external.navigation.YawPitchRollAngles;
@@ -22,9 +21,9 @@ import java.util.List;
 /*
  * This OpMode illustrates autonomous mode for driving to different wheel positions based on xPos.
  */
-@Autonomous(name = "ComputerVision Auto", group = "Concept")
+@Autonomous(name = "ComputerVisionAuto", group = "Concept")
 //@Disabled
-public class AutoComputerVision extends LinearOpMode {
+public class ComputerVisionAuto extends LinearOpMode {
 
     private ElapsedTime runtime = new ElapsedTime();
     private DcMotorEx leftFrontDrive = null;
@@ -44,7 +43,7 @@ public class AutoComputerVision extends LinearOpMode {
 
     private static final boolean USE_WEBCAM = true;  // true for webcam, false for phone camera
     private TfodProcessor tfod;
-    private static final String TFOD_MODEL_ASSET = "CenterStage.tflite";
+    private static final String TFOD_MODEL_FILE = "/sdcard/FIRST/tflitemodels/CenterStage.tflite";
     private static final String[] LABELS = {
             "Pixel",
     };
@@ -117,9 +116,7 @@ public class AutoComputerVision extends LinearOpMode {
         waitForStart();
         doTfod();
         if (opModeIsActive()) {
-            yaw   = robotOrientation.getYaw(AngleUnit.DEGREES);
-            pitch = robotOrientation.getPitch(AngleUnit.DEGREES);
-            roll  = robotOrientation.getRoll(AngleUnit.DEGREES);
+
 
             // Drive to appropriate wheel positions based on xPos
 
@@ -158,8 +155,8 @@ public class AutoComputerVision extends LinearOpMode {
 
             arm.setTargetPosition(armPositionUp);
             gripPose.setTargetPosition(gripPosePositionUp);
-            arm.setPower(0.6);
-            gripPose.setPower(0.6);
+            arm.setPower(0.5);
+            gripPose.setPower(0.5);
             arm.setMode(DcMotorEx.RunMode.RUN_TO_POSITION);
             gripPose.setMode(DcMotorEx.RunMode.RUN_TO_POSITION);
 
@@ -170,10 +167,25 @@ public class AutoComputerVision extends LinearOpMode {
             driveToPosition(wheelPositionNull);
             arm.setTargetPosition(0);
             gripPose.setTargetPosition(0);
-            arm.setPower(1.0);
-            gripPose.setPower(1.0);
+            arm.setPower(0.5);
+            gripPose.setPower(0.5);
             arm.setMode(DcMotorEx.RunMode.RUN_TO_POSITION);
             gripPose.setMode(DcMotorEx.RunMode.RUN_TO_POSITION);
+
+            while (opModeIsActive()) {
+                robotOrientation = imu.getRobotYawPitchRollAngles();
+                yaw   = robotOrientation.getYaw(AngleUnit.DEGREES);
+                pitch = robotOrientation.getPitch(AngleUnit.DEGREES);
+                roll  = robotOrientation.getRoll(AngleUnit.DEGREES);
+
+                if (yaw < -10 || yaw > 10) {
+                    telemetry.addData("Heading", "Heading is over 10 degrees off!");
+
+                }
+                telemetry.addData("Powers", "%4.3f ,%4.3f, %4.3f, %4.3f", leftFrontDrive.getPower(), rightFrontDrive.getPower(), leftBackDrive.getPower(), rightBackDrive.getPower());
+                telemetry.addData("IMU readings", "%4.1f, %4.1f, %4.1f", yaw, pitch, roll);
+                telemetry.update();
+            }
             }
 
         }
@@ -202,10 +214,6 @@ public class AutoComputerVision extends LinearOpMode {
         // Wait for motors to reach target positions
         while (leftFrontDrive.isBusy() || leftBackDrive.isBusy() || rightFrontDrive.isBusy() || rightBackDrive.isBusy()) {
             // Do nothing
-            if (yaw < -10 || yaw > 10) {
-                telemetry.addData("Heading", "Heading is over 10 degrees off!");
-                telemetry.update();
-            }
 
             if (driveTime.seconds() >= 10) {
                 break;
@@ -230,8 +238,8 @@ public class AutoComputerVision extends LinearOpMode {
 
                 //   Use setModelAssetName() if the custom TF Model is built in as an asset (AS only).
                 //   Use setModelFileName() if you have downloaded a custom team model to the Robot Controller.
-                .setModelAssetName(TFOD_MODEL_ASSET)
-                //.setModelFileName(TFOD_MODEL_FILE)
+                //.setModelAssetName(TFOD_MODEL_ASSET)
+                .setModelFileName(TFOD_MODEL_FILE)
 
                 // The following default settings are available to un-comment and edit as needed to
                 // set parameters for custom models.

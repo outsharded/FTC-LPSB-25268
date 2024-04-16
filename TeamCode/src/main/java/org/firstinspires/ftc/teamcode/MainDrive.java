@@ -123,6 +123,7 @@ public class MainDrive extends LinearOpMode {
         gripPose.setDirection(DcMotorEx.Direction.REVERSE);
         gripPose.setZeroPowerBehavior(DcMotorEx.ZeroPowerBehavior.FLOAT);
 
+        grip.setPosition(gripHomePosition);
         //inform driver hub that initalisation has completed
         telemetry.addData("Status", "Initialized");
         telemetry.update();

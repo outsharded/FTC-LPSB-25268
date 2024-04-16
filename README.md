@@ -12,5 +12,5 @@ This is the code for the 2023-24 CENTRESTAGE team 25268. The TeamCode is under [
 * The arm is lowered, then the grip is closed.
 
 ## TODO for future 
-- [] Rebuild autonomous using RoadRunner
-- [] Add Arm Zeroing (going to its home position), using touch sensors
+- [ ] Rebuild autonomous using RoadRunner
+- [ ] Add Arm Zeroing (going to its home position), using touch sensors

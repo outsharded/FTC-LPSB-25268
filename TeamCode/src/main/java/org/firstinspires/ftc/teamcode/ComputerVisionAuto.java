@@ -1,5 +1,7 @@
 package org.firstinspires.ftc.teamcode;
 
+import android.util.Size;
+
 import com.qualcomm.hardware.rev.RevHubOrientationOnRobot;
 import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode;
 import com.qualcomm.robotcore.eventloop.opmode.Autonomous;
@@ -24,8 +26,12 @@ import java.util.List;
 @Autonomous(name = "ComputerVisionAuto", group = "Concept")
 //@Disabled
 public class ComputerVisionAuto extends LinearOpMode {
-
+    //Monitors
+    private ElapsedTime loopTime = new ElapsedTime();
     private ElapsedTime runtime = new ElapsedTime();
+    private double xPos = 0.0;
+
+    //Hardware
     private DcMotorEx leftFrontDrive = null;
     private DcMotorEx leftBackDrive = null;
     private DcMotorEx rightFrontDrive = null;
@@ -35,12 +41,12 @@ public class ComputerVisionAuto extends LinearOpMode {
     private Servo grip = null;
     private IMU imu = null;
 
+    //External monitor
     private Double yaw = 0.0;
     private Double pitch = 0.0;
     private Double roll = 0.0;
 
-    private double xPos = 0.0;
-
+//tfod
     private static final boolean USE_WEBCAM = true;  // true for webcam, false for phone camera
     private TfodProcessor tfod;
     private static final String TFOD_MODEL_FILE = "/sdcard/FIRST/tflitemodels/CenterStage.tflite";
@@ -49,18 +55,19 @@ public class ComputerVisionAuto extends LinearOpMode {
     };
     private VisionPortal visionPortal;
 
+    //settings
     private static final int[] wheelPositionLeft = {1100, 2000, 1800, 1300}; // Example values
     private static final int[] wheelPositionCentre = {1550, 1550, 1550, 1550}; // Example values
     private static final int[] wheelPositionRight = {2000, 1100, 1300, 1800}; // Example values
     private static final int[] wheelPositionNull = {0,0,0,0};
     // Define arm and gripPose positions and gripper closed position
-    private static final int armPosition = 210; // Example value
+    private static final int armPosition = 1200; // Example value
     private static final int gripPosePosition = 280; // Example value
 
-    private static final int armPositionUp = 300; // Example value
+    private static final int armPositionUp = 1500; // Example value
     private static final int gripPosePositionUp = 280; // Example value
-    private static final double gripperClosedPosition = 0.3; // Example value
-    private static final double gripperOpenPosition = 0.6; // Example value
+    private static final double gripperClosedPosition = 0.0; // Example value
+    private static final double gripperOpenPosition = 0.055; // Example value
 
     @Override
     public void runOpMode() {
@@ -74,13 +81,13 @@ public class ComputerVisionAuto extends LinearOpMode {
         arm = hardwareMap.get(DcMotorEx.class, "arm");
         gripPose = hardwareMap.get(DcMotorEx.class, "gripPose");
         grip = hardwareMap.get(Servo.class, "grip");
-        imu = hardwareMap.get(IMU.class, "IMU");
+        imu = hardwareMap.get(IMU.class, "imu");
 
         // Set motor directions
         leftFrontDrive.setDirection(DcMotorEx.Direction.REVERSE);
         leftBackDrive.setDirection(DcMotorEx.Direction.REVERSE);
         rightFrontDrive.setDirection(DcMotorEx.Direction.FORWARD);
-        rightBackDrive.setDirection(DcMotorEx.Direction.FORWARD);
+        rightBackDrive.setDirection(DcMotorEx.Direction.REVERSE);
         arm.setDirection(DcMotorEx.Direction.REVERSE);
         gripPose.setDirection(DcMotorEx.Direction.REVERSE);
 
@@ -111,26 +118,28 @@ public class ComputerVisionAuto extends LinearOpMode {
         robotOrientation = imu.getRobotYawPitchRollAngles();
 
         grip.setPosition(gripperOpenPosition);
-
+        telemetry.setAutoClear(false);
 
         waitForStart();
+        loopTime.reset();
         doTfod();
         if (opModeIsActive()) {
-
-
             // Drive to appropriate wheel positions based on xPos
 
-            if (xPos <= 100) {
+            if (xPos <= 200) {
                 driveToPosition(wheelPositionLeft);
-            } else if (xPos <= 200) {
+            } else if (xPos <= 480) {
                 driveToPosition(wheelPositionCentre);
-            } else if (xPos > 200) {
+            } else if (xPos > 480) {
                 driveToPosition(wheelPositionRight);
             } else {
                 driveToPosition(wheelPositionCentre);
                 telemetry.addData("Vision Error", "No xPos supplied.");
+                telemetry.update();
             }
-
+            
+            //stop the vision portal
+            visionPortal.stopStreaming();
 
             // Set arm and gripPose positions
             arm.setTargetPosition(armPosition);
@@ -143,34 +152,34 @@ public class ComputerVisionAuto extends LinearOpMode {
             // Wait for arm and gripPose to reach target positions
             while (arm.isBusy() || gripPose.isBusy() || leftFrontDrive.isBusy() || leftBackDrive.isBusy() || rightFrontDrive.isBusy() || rightBackDrive.isBusy()) {
                 // Do nothing
-                if (runtime.seconds() >= 15) {
+                if (runtime.seconds() >= 8) {
                     break;
                 }
             }
 
             grip.setPosition(gripperClosedPosition);
-            while (runtime.seconds() < 16) {
-                // do fuck all
+            while (runtime.seconds() < 9) {
+                // do nothing
             }
 
             arm.setTargetPosition(armPositionUp);
             gripPose.setTargetPosition(gripPosePositionUp);
-            arm.setPower(0.5);
-            gripPose.setPower(0.5);
+            arm.setPower(0.6);
+            gripPose.setPower(0.6);
             arm.setMode(DcMotorEx.RunMode.RUN_TO_POSITION);
             gripPose.setMode(DcMotorEx.RunMode.RUN_TO_POSITION);
 
-            while (runtime.seconds() < 20) {
-                // do fuck all
+            while (runtime.seconds() < 12) {
+                // do nothing
             }
 
-            driveToPosition(wheelPositionNull);
             arm.setTargetPosition(0);
             gripPose.setTargetPosition(0);
-            arm.setPower(0.5);
-            gripPose.setPower(0.5);
+            arm.setPower(1.0);
+            gripPose.setPower(1.0);
             arm.setMode(DcMotorEx.RunMode.RUN_TO_POSITION);
             gripPose.setMode(DcMotorEx.RunMode.RUN_TO_POSITION);
+            driveToPosition(wheelPositionNull);
 
             while (opModeIsActive()) {
                 robotOrientation = imu.getRobotYawPitchRollAngles();
@@ -183,12 +192,20 @@ public class ComputerVisionAuto extends LinearOpMode {
 
                 }
                 telemetry.addData("Powers", "%4.3f ,%4.3f, %4.3f, %4.3f", leftFrontDrive.getPower(), rightFrontDrive.getPower(), leftBackDrive.getPower(), rightBackDrive.getPower());
+                telemetry.addData("Front Left Target:", leftFrontDrive.getTargetPosition());
+                telemetry.addData("Front Right Target:", rightFrontDrive.getTargetPosition());
+                telemetry.addData("Back Left Target:", leftBackDrive.getTargetPosition());
+                telemetry.addData("Back Right Target:", rightBackDrive.getTargetPosition());
                 telemetry.addData("IMU readings", "%4.1f, %4.1f, %4.1f", yaw, pitch, roll);
+                telemetry.addData("Loop time:", "%4.1f", loopTime.milliseconds());
                 telemetry.update();
-            }
-            }
 
+                loopTime.reset();
+            }
         }
+        }
+
+
 
 
     // Method to drive to specified wheel positions
@@ -201,21 +218,26 @@ public class ComputerVisionAuto extends LinearOpMode {
         rightBackDrive.setTargetPosition(positions[3]);
 
         // Set motor powers and run to position
-        leftFrontDrive.setPower(0.5);
-        leftBackDrive.setPower(0.5);
-        rightFrontDrive.setPower(0.5);
-        rightBackDrive.setPower(0.5);
+        leftFrontDrive.setPower(0.8);
+        leftBackDrive.setPower(0.8);
+        rightFrontDrive.setPower(0.8);
+        rightBackDrive.setPower(0.8);
 
         leftFrontDrive.setMode(DcMotorEx.RunMode.RUN_TO_POSITION);
         leftBackDrive.setMode(DcMotorEx.RunMode.RUN_TO_POSITION);
         rightFrontDrive.setMode(DcMotorEx.RunMode.RUN_TO_POSITION);
         rightBackDrive.setMode(DcMotorEx.RunMode.RUN_TO_POSITION);
 
+
+
         // Wait for motors to reach target positions
         while (leftFrontDrive.isBusy() || leftBackDrive.isBusy() || rightFrontDrive.isBusy() || rightBackDrive.isBusy()) {
-            // Do nothing
-
-            if (driveTime.seconds() >= 10) {
+             //Do nothing
+//            if (yaw < -10 || yaw > 10) {
+//                telemetry.addData("Heading", "Heading is over 10 degrees off!");
+//
+//            }
+            if (driveTime.seconds() >= 8) {
                 break;
             }
 
@@ -232,56 +254,32 @@ public class ComputerVisionAuto extends LinearOpMode {
      * Initialize the TensorFlow Object Detection processor.
      */
     private void initTfod() {
-
-        // Create the TensorFlow processor the easy way.
+        // Create the TensorFlow processor
         tfod = new TfodProcessor.Builder()
-
-                //   Use setModelAssetName() if the custom TF Model is built in as an asset (AS only).
-                //   Use setModelFileName() if you have downloaded a custom team model to the Robot Controller.
-                //.setModelAssetName(TFOD_MODEL_ASSET)
                 .setModelFileName(TFOD_MODEL_FILE)
-
-                // The following default settings are available to un-comment and edit as needed to
-                // set parameters for custom models.
                 .setModelLabels(LABELS)
                 //.setIsModelTensorFlow2(true)
                 //.setIsModelQuantized(true)
                 //.setModelInputSize(300)
                 //.setModelAspectRatio(16.0 / 9.0)
-
-                .build();
+        .build();
 
 // Create the vision portal by using a builder.
         VisionPortal.Builder builder = new VisionPortal.Builder();
-// Set the camera (webcam vs. built-in RC phone camera).
-        if (USE_WEBCAM) {
             builder.setCamera(hardwareMap.get(WebcamName.class, "Webcam 1"));
-        } else {
-            builder.setCamera(BuiltinCameraDirection.BACK);
-        }
-// Choose a camera resolution. Not all cameras support all resolutions.
-        //   builder.setCameraResolution(new Size(640, 480));
-
-// Enable the RC preview (LiveView).  Set "false" to omit camera monitoring.
-        builder.enableLiveView(true);
-
-// Set the stream format; MJPEG uses less bandwidth than default YUY2.
-        builder.setStreamFormat(VisionPortal.StreamFormat.YUY2);
-        builder.setAutoStopLiveView(false);
-
-// Set and enable the processor.
-        builder.addProcessor(tfod);
-
+            builder.setCameraResolution(new Size(680, 480));
+            builder.enableLiveView(true);
+            // Set the stream format; MJPEG uses less bandwidth than default YUY2.
+            builder.setStreamFormat(VisionPortal.StreamFormat.MJPEG);
+            builder.setAutoStopLiveView(false);
+            builder.addProcessor(tfod);
 // Build the Vision Portal, using the above settings.
         visionPortal = builder.build();
 
-        tfod.setZoom(2.0);
+        tfod.setClippingMargins(50, 200, 50, 10);
         tfod.setMinResultConfidence(0.75f);
     }   // end method initTfod()
 
-    /**
-     * Add telemetry about TensorFlow Object Detection (TFOD) recognitions.
-     */
     private void doTfod() {
         List<Recognition> currentRecognitions = tfod.getRecognitions();
         telemetry.addData("# Objects Detected", currentRecognitions.size());
@@ -308,6 +306,8 @@ public class ComputerVisionAuto extends LinearOpMode {
             telemetry.addData("Image", "%s (%.0f %% Conf.)", recognition.getLabel(), recognition.getConfidence() * 100);
             telemetry.addData("- Position", "%.0f / %.0f", x, y);
             telemetry.addData("- Size", "%.0f x %.0f", recognition.getWidth(), recognition.getHeight());
+
+            telemetry.update();
         }   // end for() loop
 
         // Set xPos to the X position of the recognition with the largest size

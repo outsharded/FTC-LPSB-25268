@@ -115,7 +115,6 @@ public class ComputerVisionAuto extends LinearOpMode {
         );
 
         YawPitchRollAngles robotOrientation;
-        robotOrientation = imu.getRobotYawPitchRollAngles();
 
         grip.setPosition(gripperOpenPosition);
         telemetry.setAutoClear(false);
@@ -137,7 +136,7 @@ public class ComputerVisionAuto extends LinearOpMode {
                 telemetry.addData("Vision Error", "No xPos supplied.");
                 telemetry.update();
             }
-            
+
             //stop the vision portal
             visionPortal.stopStreaming();
 

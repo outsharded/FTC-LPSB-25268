@@ -37,7 +37,6 @@ import com.qualcomm.robotcore.hardware.PIDFCoefficients;
 import com.qualcomm.robotcore.hardware.Servo;
 import com.qualcomm.robotcore.util.ElapsedTime;
 
-
 @TeleOp(name="MainDrive", group="Linear OpMode")
 //@Disabled
 public class MainDrive extends LinearOpMode {
@@ -67,22 +66,36 @@ public class MainDrive extends LinearOpMode {
     private final double planeLauncherPreset = 0.3;
     private final double planeLauncherActive = 0.8;
 
-    private final PIDFCoefficients armPIDFCoefficents = new PIDFCoefficients(0,0,0,0);
-    private final PIDFCoefficients gripPIDFCoefficents = new PIDFCoefficients(0,0,0,0);
-    private final int armHomePosition = 0;
-    private final int armIntakePosition = 10;
-    private final int armScorePosition = 600;
+//    private final double[] armPIDF = {2.244, 0.2244, 0, 22.44};
+//    private final double[] gripPIDF = {13.653, 1.3653, 0, 136.53};
+
+    private final double[] armPIDF = {0.0, 0.0, 0.0, 0.0};
+    private final double[] gripPIDF = {0.0, 0.0, 0.0, 0.0};
+    private final int armHomePosition = 1300;
+    private final int armIntakePosition = 950;
+    private final int armScorePosition = 2800;
     private final int armShutdownThreshold = 5;
 
-    private final int gripHomePosition = 0;
-    private final int gripIntakePosition = 10;
-    private final int gripScorePosition = 600;
+    private final int gripHomePosition = 270;
+    private final int gripIntakePosition = 270;
+    private final int gripScorePosition = 70;
     private final int gripShutdownThreshold = 5;
 
     private final double wheelSpeed = 0.8;
     private final double armSpeed = 0.5;
 
     // external monitor
+    private int armError = 0;
+    private int gripError = 0;
+    private int armLastError = 0;
+    private int gripLastError = 0;
+    private double armDerivative = 0.0;
+    private double gripDerivative = 0.0;
+    private double armIntegralSum = 0.0;
+    private double gripIntegralSum = 0.0;
+    private double armOut = 0.0;
+    private double gripOut = 0.0;
+
     private double armCurrentVelocity = 0.0;
     private double gripCurrentVelocity = 0.0;
     private double maxArmVelocity = 0.0;
@@ -102,8 +115,8 @@ public class MainDrive extends LinearOpMode {
         leftBackDrive = hardwareMap.get(DcMotorEx.class, "BackLeft");
         rightFrontDrive = hardwareMap.get(DcMotorEx.class, "FrontRight");
         rightBackDrive = hardwareMap.get(DcMotorEx.class, "BackRight");
-        arm = hardwareMap.get(DcMotorEx.class, "arm");
-        gripPose = hardwareMap.get(DcMotorEx.class, "gripPose");
+        arm = (DcMotorEx)hardwareMap.get(DcMotorEx.class, "arm");
+        gripPose = (DcMotorEx)hardwareMap.get(DcMotorEx.class, "gripPose");
         grip = hardwareMap.get(Servo.class, "grip");
         planeLauncher = hardwareMap.get(Servo.class, "planeLauncher");
 
@@ -123,7 +136,7 @@ public class MainDrive extends LinearOpMode {
         gripPose.setDirection(DcMotorEx.Direction.REVERSE);
         gripPose.setZeroPowerBehavior(DcMotorEx.ZeroPowerBehavior.FLOAT);
 
-        grip.setPosition(gripHomePosition);
+        grip.setPosition(gripperOpenPosition);
         //inform driver hub that initalisation has completed
         telemetry.addData("Status", "Initialized");
         telemetry.update();
@@ -177,20 +190,20 @@ public class MainDrive extends LinearOpMode {
                     gripPose.setTargetPosition(gripPose.getCurrentPosition());
                     arm.setPower(0.0);
                     gripPose.setPower(0.0);
-                    arm.setPIDFCoefficients(DcMotorEx.RunMode.RUN_TO_POSITION, armPIDFCoefficents);
-                    //arm.setMode(DcMotorEx.RunMode.RUN_TO_POSITION);
-                    gripPose.setPIDFCoefficients(DcMotor.RunMode.RUN_TO_POSITION, gripPIDFCoefficents);
-                    //gripPose.setMode(DcMotorEx.RunMode.RUN_TO_POSITION);
+                    //arm.setPIDFCoefficients(DcMotorEx.RunMode.RUN_TO_POSITION, armPIDFCoefficents);
+                    arm.setMode(DcMotorEx.RunMode.RUN_TO_POSITION);
+                    //gripPose.setPIDFCoefficients(DcMotor.RunMode.RUN_TO_POSITION, gripPIDFCoefficents);
+                    gripPose.setMode(DcMotorEx.RunMode.RUN_TO_POSITION);
                     manualMode = false;
                 }
 
                 //preset buttons
                 if (gamepad2.square) {
-                    armToPosition(armHomePosition, gripHomePosition);
+                    armToPosition(armHomePosition, gripHomePosition, armPIDF, gripPIDF);
                 } else if (gamepad2.circle) {
-                    armToPosition(armIntakePosition, gripIntakePosition);
+                    armToPosition(armIntakePosition, gripIntakePosition, armPIDF, gripPIDF);
                 } else if (gamepad2.triangle) {
-                    armToPosition(armScorePosition, gripScorePosition);
+                    armToPosition(armScorePosition, gripScorePosition, armPIDF, gripPIDF);
                 }
             }
 
@@ -198,10 +211,10 @@ public class MainDrive extends LinearOpMode {
             if (!manualMode &&
                     arm.getMode() == DcMotorEx.RunMode.RUN_TO_POSITION &&
                     Math.abs(arm.getTargetPosition() - arm.getCurrentPosition()) <= armShutdownThreshold &&
-                   // arm.getCurrentPosition() <= armShutdownThreshold &&
+                    // arm.getCurrentPosition() <= armShutdownThreshold &&
                     gripPose.getMode() == DcMotorEx.RunMode.RUN_TO_POSITION &&
                     Math.abs(gripPose.getTargetPosition() - gripPose.getCurrentPosition()) <= gripShutdownThreshold
-                   //&& gripPose.getCurrentPosition() <= gripShutdownThreshold
+                //&& gripPose.getCurrentPosition() <= gripShutdownThreshold
             ) { //if preset has been reached, neutralise motors
                 arm.setPower(0.0);
                 gripPose.setPower(0.0);
@@ -253,16 +266,48 @@ public class MainDrive extends LinearOpMode {
         }
     }
 
-    private void armToPosition(int armPosition, int gripPosePosition) {
-        arm.setTargetPosition(armPosition);
-        gripPose.setTargetPosition(gripPosePosition);
-        arm.setPower(armSpeed);
-        gripPose.setPower(armSpeed);
+    private void armToPosition(int armPositionReference, int gripPosePositionReference, double[] armPIDF, double[] gripPIDF ) {
+        ElapsedTime PIDFTimer = new ElapsedTime();
+        double armKp = armPIDF[0];
+        double armKi = armPIDF[1];
+        double armKd = armPIDF[2];
+        double gripKp = gripPIDF[0];
+        double gripKi = gripPIDF[1];
+        double gripKd = gripPIDF[2];
+
+        while (Math.abs(armError) > 5 || Math.abs(gripError) > 5) {
+            armPosition = arm.getCurrentPosition();
+            gripPosition = gripPose.getCurrentPosition();
+
+            armError = armPositionReference - armPosition;
+            gripError = gripPosePositionReference - gripPosition;
+
+            armDerivative = (armError - armLastError) / PIDFTimer.seconds();
+            gripDerivative = (gripError - gripLastError) / PIDFTimer.seconds();
+
+            armIntegralSum = armIntegralSum + (armError * PIDFTimer.seconds());
+            gripIntegralSum = gripIntegralSum + (gripError * PIDFTimer.seconds());
+
+            armOut = (armKp * armError) + (armKi * armIntegralSum) + (armKd * armDerivative);
+            gripOut = (gripKp * gripError) + (gripKi * gripIntegralSum) + (gripKd * gripDerivative);
+
+            arm.setPower(armOut);
+            gripPose.setPower(gripOut);
+
+            armLastError = armError;
+            gripLastError = gripError;
+
+            PIDFTimer.reset();
+        }
+//        arm.setTargetPosition(armPosition);
+//        gripPose.setTargetPosition(gripPosePosition);
+//        arm.setPower(armSpeed);
+//        gripPose.setPower(armSpeed);
         //use PIDF to go to positions
-        arm.setPIDFCoefficients(DcMotorEx.RunMode.RUN_TO_POSITION, armPIDFCoefficents);
-        //arm.setMode(DcMotorEx.RunMode.RUN_TO_POSITION);
-        gripPose.setPIDFCoefficients(DcMotor.RunMode.RUN_TO_POSITION, gripPIDFCoefficents);
-        //gripPose.setMode(DcMotorEx.RunMode.RUN_TO_POSITION);
+        //arm.setPIDFCoefficients(DcMotorEx.RunMode.RUN_TO_POSITION, armPIDFCoefficents);
+        arm.setMode(DcMotorEx.RunMode.RUN_USING_ENCODER);
+        //gripPose.setPIDFCoefficients(DcMotor.RunMode.RUN_TO_POSITION, gripPIDFCoefficents);
+        gripPose.setMode(DcMotorEx.RunMode.RUN_USING_ENCODER);
     }
 
     private void velocity() { // check maximum velocities

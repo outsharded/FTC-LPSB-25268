@@ -46,7 +46,7 @@ public class ComputerVisionAuto extends LinearOpMode {
     private Double pitch = 0.0;
     private Double roll = 0.0;
 
-//tfod
+    //tfod
     private static final boolean USE_WEBCAM = true;  // true for webcam, false for phone camera
     private TfodProcessor tfod;
     private static final String TFOD_MODEL_FILE = "/sdcard/FIRST/tflitemodels/CenterStage.tflite";
@@ -202,7 +202,7 @@ public class ComputerVisionAuto extends LinearOpMode {
                 loopTime.reset();
             }
         }
-        }
+    }
 
 
 
@@ -231,7 +231,7 @@ public class ComputerVisionAuto extends LinearOpMode {
 
         // Wait for motors to reach target positions
         while (leftFrontDrive.isBusy() || leftBackDrive.isBusy() || rightFrontDrive.isBusy() || rightBackDrive.isBusy()) {
-             //Do nothing
+            //Do nothing
 //            if (yaw < -10 || yaw > 10) {
 //                telemetry.addData("Heading", "Heading is over 10 degrees off!");
 //
@@ -261,17 +261,17 @@ public class ComputerVisionAuto extends LinearOpMode {
                 //.setIsModelQuantized(true)
                 //.setModelInputSize(300)
                 //.setModelAspectRatio(16.0 / 9.0)
-        .build();
+                .build();
 
 // Create the vision portal by using a builder.
         VisionPortal.Builder builder = new VisionPortal.Builder();
-            builder.setCamera(hardwareMap.get(WebcamName.class, "Webcam 1"));
-            builder.setCameraResolution(new Size(680, 480));
-            builder.enableLiveView(true);
-            // Set the stream format; MJPEG uses less bandwidth than default YUY2.
-            builder.setStreamFormat(VisionPortal.StreamFormat.MJPEG);
-            builder.setAutoStopLiveView(false);
-            builder.addProcessor(tfod);
+        builder.setCamera(hardwareMap.get(WebcamName.class, "Webcam 1"));
+        builder.setCameraResolution(new Size(640, 480));
+        builder.enableLiveView(true);
+        // Set the stream format; MJPEG uses less bandwidth than default YUY2.
+        builder.setStreamFormat(VisionPortal.StreamFormat.MJPEG);
+        builder.setAutoStopLiveView(false);
+        builder.addProcessor(tfod);
 // Build the Vision Portal, using the above settings.
         visionPortal = builder.build();
 

@@ -33,7 +33,6 @@ import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode;
 import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
 import com.qualcomm.robotcore.hardware.DcMotor;
 import com.qualcomm.robotcore.hardware.DcMotorEx;
-import com.qualcomm.robotcore.hardware.PIDFCoefficients;
 import com.qualcomm.robotcore.hardware.Servo;
 import com.qualcomm.robotcore.util.ElapsedTime;
 
@@ -82,7 +81,8 @@ public class MainDrive extends LinearOpMode {
     private final int gripShutdownThreshold = 5;
 
     private final double wheelSpeed = 0.8;
-    private final double armSpeed = 0.5;
+    private final double gripSpeed = 0.5;
+    private final double armSpeed = 1.0;
 
     // external monitor
     private int armError = 0;
@@ -103,6 +103,9 @@ public class MainDrive extends LinearOpMode {
 
     private int armPosition = 0;
     private int gripPosition = 0;
+
+    private boolean slowMode = false;
+    private double slowMultiplier = 1.0;
 
     @Override
     public void runOpMode() {
@@ -166,12 +169,14 @@ public class MainDrive extends LinearOpMode {
             double yaw = gamepad1.right_stick_x;
             manualArmPower = -gamepad2.left_stick_y;
             manualGripPower  = -gamepad2.right_stick_y;
+            slowMode = gamepad1.square;
 
+            slowMultiplier = slowMode ? 0.2 : 1.0;
             // Math out the powers for the wheelbase
-            double leftFrontPower = (axial + lateral + yaw) * wheelSpeed;
-            double rightFrontPower = (axial - lateral - yaw) * wheelSpeed;
-            double leftBackPower = (axial - lateral + yaw) * wheelSpeed;
-            double rightBackPower = (axial + lateral - yaw) * wheelSpeed;
+            double leftFrontPower = (axial + lateral + yaw) * wheelSpeed * slowMultiplier;
+            double rightFrontPower = (axial - lateral - yaw) * wheelSpeed * slowMultiplier;
+            double leftBackPower = (axial - lateral + yaw) * wheelSpeed * slowMultiplier;
+            double rightBackPower = (axial + lateral - yaw) * wheelSpeed * slowMultiplier;
 
             if (Math.abs(manualArmPower) > armManualDeadband || Math.abs(manualGripPower) > armManualDeadband) { //if powers being received are large enough
                 if (!manualMode) { // if the presets are running, stop them and give the driver control
@@ -183,7 +188,7 @@ public class MainDrive extends LinearOpMode {
                 }
                 //assign the powers to the arm motors
                 arm.setPower(manualArmPower * armSpeed);
-                gripPose.setPower(manualGripPower * armSpeed);
+                gripPose.setPower(manualGripPower * gripSpeed);
             } else { //if the sticks are not being used
                 if (manualMode) { // set the motors to be neutral
                     arm.setTargetPosition(arm.getCurrentPosition());
@@ -275,7 +280,10 @@ public class MainDrive extends LinearOpMode {
         double gripKi = gripPIDF[1];
         double gripKd = gripPIDF[2];
 
-        while (Math.abs(armError) > 5 || Math.abs(gripError) > 5) {
+        arm.setMode(DcMotorEx.RunMode.RUN_USING_ENCODER);
+        gripPose.setMode(DcMotorEx.RunMode.RUN_USING_ENCODER);
+
+        while ((Math.abs(armError) > 5 || Math.abs(gripError) > 5) && !manualMode) {
             armPosition = arm.getCurrentPosition();
             gripPosition = gripPose.getCurrentPosition();
 
@@ -298,16 +306,23 @@ public class MainDrive extends LinearOpMode {
             gripLastError = gripError;
 
             PIDFTimer.reset();
+
+            if (manualMode) {
+                break;
+            }
         }
+
+        armError = 0;
+        gripError = 0;
 //        arm.setTargetPosition(armPosition);
 //        gripPose.setTargetPosition(gripPosePosition);
 //        arm.setPower(armSpeed);
 //        gripPose.setPower(armSpeed);
         //use PIDF to go to positions
         //arm.setPIDFCoefficients(DcMotorEx.RunMode.RUN_TO_POSITION, armPIDFCoefficents);
-        arm.setMode(DcMotorEx.RunMode.RUN_USING_ENCODER);
+
         //gripPose.setPIDFCoefficients(DcMotor.RunMode.RUN_TO_POSITION, gripPIDFCoefficents);
-        gripPose.setMode(DcMotorEx.RunMode.RUN_USING_ENCODER);
+
     }
 
     private void velocity() { // check maximum velocities

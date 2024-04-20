@@ -68,8 +68,8 @@ public class MainDrive extends LinearOpMode {
 //    private final double[] armPIDF = {2.244, 0.2244, 0, 22.44};
 //    private final double[] gripPIDF = {13.653, 1.3653, 0, 136.53};
 
-    private final double[] armPIDF = {0.0, 0.0, 0.0, 0.0};
-    private final double[] gripPIDF = {0.0, 0.0, 0.0, 0.0};
+    private final double[] armPIDF = {0.001, 0.0, 0.0001, 0.0};
+    private final double[] gripPIDF = {0.005, 0.0, 0.0001, 0.0};
     private final int armHomePosition = 1300;
     private final int armIntakePosition = 950;
     private final int armScorePosition = 2800;

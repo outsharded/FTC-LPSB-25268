@@ -83,6 +83,8 @@ public class MainDrive extends LinearOpMode {
     private final double wheelSpeed = 0.8;
     private final double gripSpeed = 0.5;
     private final double armSpeed = 1.0;
+    private final double armVelocitySet = 2920.0;
+    private final double gripVelocitySet = 480.0;
 
     // external monitor
     private int armError = 0;
@@ -180,25 +182,25 @@ public class MainDrive extends LinearOpMode {
 
             if (Math.abs(manualArmPower) > armManualDeadband || Math.abs(manualGripPower) > armManualDeadband) { //if powers being received are large enough
                 if (!manualMode) { // if the presets are running, stop them and give the driver control
-                    arm.setPower(0.0);
-                    gripPose.setPower(0.0);
+                    arm.setVelocity(0.0);
+                    gripPose.setVelocity(0.0);
                     arm.setMode(DcMotorEx.RunMode.RUN_USING_ENCODER);
                     gripPose.setMode(DcMotorEx.RunMode.RUN_USING_ENCODER);
                     manualMode = true;
                 }
                 //assign the powers to the arm motors
-                arm.setPower(manualArmPower * armSpeed);
-                gripPose.setPower(manualGripPower * gripSpeed);
+                arm.setVelocity(manualArmPower * armSpeed * armVelocitySet);
+                gripPose.setVelocity(manualGripPower * gripSpeed * gripVelocitySet);
             } else { //if the sticks are not being used
                 if (manualMode) { // set the motors to be neutral
-                    arm.setTargetPosition(arm.getCurrentPosition());
-                    gripPose.setTargetPosition(gripPose.getCurrentPosition());
-                    arm.setPower(0.0);
-                    gripPose.setPower(0.0);
-                    //arm.setPIDFCoefficients(DcMotorEx.RunMode.RUN_TO_POSITION, armPIDFCoefficents);
-                    arm.setMode(DcMotorEx.RunMode.RUN_TO_POSITION);
-                    //gripPose.setPIDFCoefficients(DcMotor.RunMode.RUN_TO_POSITION, gripPIDFCoefficents);
-                    gripPose.setMode(DcMotorEx.RunMode.RUN_TO_POSITION);
+//                    arm.setTargetPosition(arm.getCurrentPosition());
+//                    gripPose.setTargetPosition(gripPose.getCurrentPosition());
+                    arm.setVelocity(0.0);
+                    gripPose.setVelocity(0.0);
+//                    //arm.setPIDFCoefficients(DcMotorEx.RunMode.RUN_TO_POSITION, armPIDFCoefficents);
+//                    arm.setMode(DcMotorEx.RunMode.RUN_TO_POSITION);
+//                    //gripPose.setPIDFCoefficients(DcMotor.RunMode.RUN_TO_POSITION, gripPIDFCoefficents);
+//                    gripPose.setMode(DcMotorEx.RunMode.RUN_TO_POSITION);
                     manualMode = false;
                 }
 
@@ -213,19 +215,19 @@ public class MainDrive extends LinearOpMode {
             }
 
             //check if the preset position has been reached
-            if (!manualMode &&
-                    arm.getMode() == DcMotorEx.RunMode.RUN_TO_POSITION &&
-                    Math.abs(arm.getTargetPosition() - arm.getCurrentPosition()) <= armShutdownThreshold &&
-                    // arm.getCurrentPosition() <= armShutdownThreshold &&
-                    gripPose.getMode() == DcMotorEx.RunMode.RUN_TO_POSITION &&
-                    Math.abs(gripPose.getTargetPosition() - gripPose.getCurrentPosition()) <= gripShutdownThreshold
-                //&& gripPose.getCurrentPosition() <= gripShutdownThreshold
-            ) { //if preset has been reached, neutralise motors
-                arm.setPower(0.0);
-                gripPose.setPower(0.0);
-                arm.setMode(DcMotorEx.RunMode.RUN_USING_ENCODER);
-                gripPose.setMode(DcMotorEx.RunMode.RUN_USING_ENCODER);
-            }
+//            if (!manualMode &&
+//                    arm.getMode() == DcMotorEx.RunMode.RUN_TO_POSITION &&
+//                    Math.abs(arm.getTargetPosition() - arm.getCurrentPosition()) <= armShutdownThreshold &&
+//                    // arm.getCurrentPosition() <= armShutdownThreshold &&
+//                    gripPose.getMode() == DcMotorEx.RunMode.RUN_TO_POSITION &&
+//                    Math.abs(gripPose.getTargetPosition() - gripPose.getCurrentPosition()) <= gripShutdownThreshold
+//                //&& gripPose.getCurrentPosition() <= gripShutdownThreshold
+//            ) { //if preset has been reached, neutralise motors
+//                arm.setPower(0.0);
+//                gripPose.setPower(0.0);
+//                arm.setMode(DcMotorEx.RunMode.RUN_USING_ENCODER);
+//                gripPose.setMode(DcMotorEx.RunMode.RUN_USING_ENCODER);
+//            }
 
             // CENTRESTAGE plane launcher
             if (gamepad1.triangle && isEndGame) {
@@ -255,13 +257,13 @@ public class MainDrive extends LinearOpMode {
             //Get velocities
             velocity();
             // Send all the data back to driver hub
-            telemetry.addData("Wheel velocities", "%8.2f, %8.2f", maxArmVelocity, maxGripVelocity);
+            telemetry.addData("Arm velocities", "%8.2f, %8.2f", maxArmVelocity, maxGripVelocity);
             telemetry.addData("Status", "Run Time: " + runtime.toString());
             telemetry.addData("Front left/Right", "%4.2f, %4.2f", leftFrontPower, rightFrontPower);
             telemetry.addData("Back  left/Right", "%4.2f, %4.2f", leftBackPower, rightBackPower);
             telemetry.addData("Arm/Grip Power", "%4.2f, %4.2f", arm.getPower(), gripPose.getPower());
             telemetry.addData("Arm Position", armPosition);
-            telemetry.addData("Grip Position", gripPosition);
+            telemetry.addData("Grip Pose Position", gripPosition);
             telemetry.addData("Grip", "%4.2f", grip.getPosition());
             telemetry.addData("Loop Time", loopTime.milliseconds());
             telemetry.update();
@@ -312,16 +314,10 @@ public class MainDrive extends LinearOpMode {
             }
         }
 
+        armPositionReference = arm.getCurrentPosition();
+        gripPosePositionReference = gripPose.getCurrentPosition();
         armError = 0;
         gripError = 0;
-//        arm.setTargetPosition(armPosition);
-//        gripPose.setTargetPosition(gripPosePosition);
-//        arm.setPower(armSpeed);
-//        gripPose.setPower(armSpeed);
-        //use PIDF to go to positions
-        //arm.setPIDFCoefficients(DcMotorEx.RunMode.RUN_TO_POSITION, armPIDFCoefficents);
-
-        //gripPose.setPIDFCoefficients(DcMotor.RunMode.RUN_TO_POSITION, gripPIDFCoefficents);
 
     }
 
